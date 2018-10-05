@@ -114,7 +114,7 @@ class Model:
                 y_train, y_test = y.iloc[train_index], y.iloc[test_index]
                 self.fit(X_train, y_train)
                 total += self.score(X_test, y_test)
-            print("total score: " + str(total) + "   for params: " + str(combo))
+            #print("total score: " + str(total) + "   for params: " + str(combo))
             if total/n_splits > bestScore:
                 bestScore = total/n_splits
                 bestParams = combo
