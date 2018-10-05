@@ -73,7 +73,7 @@ class Simulation:
                     #print("daily cap is " + str(cash))
                     principal -= dailyCap
                     py = pYields[i]
-                    stockPrice = stock.getDayPrice(i)
+                    stockPrice = stock.getDayPrice(i) #should be open price of day i
                     #print('day ' + str(i))
                     cash, acctStock = self.buyOrSell(py, cash, acctStock, stockPrice)
                     acctValue = cash+principal+acctStock*stockPrice
