@@ -20,13 +20,13 @@ from sklearn.linear_model import Ridge
 from models import *
 
 class Simulation:
-    def __init__(self, stocks, models, timeFrame, principal):
+    def __init__(self, stocks, models, timeFrame, principal, validation_freq=0):
         self.timeFrame = timeFrame
         self.stocks = self.init_stocks(stocks)
         self.models = self.init_models(models)
         self.principal = principal
         self.accounts = self.init_accounts()
-
+        self.validation_freq = validation_freq
 
     def init_accounts(self):
         accts = {}
@@ -61,7 +61,7 @@ class Simulation:
         for mod in self.models:
             for stock in self.stocks:
                 mod.addStock(stock)
-                pYields = mod.getYields()
+                pYields = mod.getYields(self.validation_freq)
                 n_days = stock.n_days_test
                 dailyCap = self.principal/n_days
                 cash = 0
@@ -149,10 +149,10 @@ class Simulation:
         
 def tester():
     stocks = ['AAPL']
-    models = ['LINREG', 'DCA']#, 'LASSO', 'RIDGE']
+    models = ['LASSO', 'DCA']#, 'LASSO', 'RIDGE']
     timeFrame = (datetime.date(2009,6,20), datetime.date(2009,8,20))
     principal = 35000
-    test = Simulation(stocks, models, timeFrame, principal)
+    test = Simulation(stocks, models, timeFrame, principal, validation_freq=10)
     test.run()
     test.visualize()
 

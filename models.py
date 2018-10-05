@@ -63,7 +63,7 @@ class Stock:
 
 
 class Model:
-    def __init__(self, params={'lag':5}, param_ranges={'lag':range(2,10,2)}):
+    def __init__(self, params={'lag':5}, param_ranges={'lag':range(2,20,2)}):
         self.mod = LinearRegression()   
         self.name = 'LINREG'
         self.params = params
@@ -114,12 +114,23 @@ class Model:
                 y_train, y_test = y.iloc[train_index], y.iloc[test_index]
                 self.fit(X_train, y_train)
                 total += self.score(X_test, y_test)
+            print("total score: " + str(total) + "   for params: " + str(combo))
             if total/n_splits > bestScore:
                 bestScore = total/n_splits
                 bestParams = combo
         print("model validated, chosing params: " + str(bestParams))
         self.initMod(X, bestParams)
         self.fit(self.laggedData, X.iloc[self.lag_n:])
+
+    '''
+    performs validations every freq days
+    
+    '''
+    def numValidations(self, freq):
+        if freq == 0:
+            return [0]
+        else:
+            return range(0, self.stock.n_days_test, freq)
         
     def generateCombinations(self, params):
         options = []
@@ -141,9 +152,10 @@ class Model:
     inputs:
     kfolds: number of validations to do
     '''
-    def getYields(self, validationDays=[]):
+    def getYields(self, validationFreq=0):
         pYields = []
-        self.validate(self.stock.testData.index[0]) #validate off of the first day
+        #self.validate(self.stock.testData.index[0]) #validate off of the first day
+        validationDays = self.numValidations(validationFreq)
         for i in range(len(self.stock.testData)):
             day = self.stock.testData.index[i]
             if i in validationDays:
@@ -193,7 +205,7 @@ class DCA(Model):
         return "Dollar Cost Averaging"
     def fit(self, X, y):
         return self #no need to fit
-    def getYields(self):
+    def getYields(self, validationFreq=0):
         pYields = []
         total = 0
         for i in range(self.stock.n_days_test):
@@ -216,7 +228,7 @@ class ARIMAModel(Model):
     def __str__(self):
         return "ARIMA"
 
-    def getYields(self):
+    def getYields(self, validationFreq = 0):
         history = [x for x in self.stock.trainData]
         pYields = []
         for i in range(len(self.stock.testData)):
