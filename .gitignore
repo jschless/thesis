@@ -1,0 +1,17 @@
+*.csv
+*.png
+data/*
+*~
+__pycache__/*
+
+*.ipynb
+*.jpg
+*.jpeg
+*.aux
+*.bbl
+*.blg
+*.log
+*.gz
+*.toc
+Old Stuff/*
+Literature/*
