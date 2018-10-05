@@ -20,24 +20,24 @@ from sklearn.linear_model import Ridge
 from models import *
 
 class Simulation:
-    def __init__(self, stocks, models, timeFrame, principal, validation_freq=0):
+    def __init__(self, stocks, models, timeFrame, principal, validation_freq=0, train_length=-1):
         self.timeFrame = timeFrame
-        self.stocks = self.init_stocks(stocks)
+        self.stocks = self.init_stocks(stocks, train_length)
         self.models = self.init_models(models)
         self.principal = principal
         self.accounts = self.init_accounts()
         self.validation_freq = validation_freq
-
+        self.train_length = train_length
     def init_accounts(self):
         accts = {}
         for mod in self.models:
             accts[mod.name] = {}
         return accts
                 
-    def init_stocks(self, stocks):
+    def init_stocks(self, stocks, train_length):
         temp = []
         for stock in stocks:
-            temp.append(Stock(stock, self.timeFrame))
+            temp.append(Stock(stock, self.timeFrame, train_length = train_length))
         return temp
     
     def init_models(self, models):
@@ -153,7 +153,8 @@ def tester():
     timeFrame = (datetime.date(2009,6,20), datetime.date(2009,8,20))
     principal = 35000
     validations = 10
-    test = Simulation(stocks, models, timeFrame, principal, validation_freq=validations)
+    train_length = 100
+    test = Simulation(stocks, models, timeFrame, principal, validation_freq=validations, train_length = train_length)
     test.run()
     test.visualize()
 

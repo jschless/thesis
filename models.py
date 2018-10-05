@@ -36,26 +36,40 @@ class TimeLag:
         return X.iloc[self.n:]
 
 class Stock:
-    def __init__(self, name, timePeriod, trainLength = -1):
+    def __init__(self, name, timePeriod, train_length = -1):
         self.name = name
         self.timePeriod = timePeriod
-        self.closeData, self.closeTrainData, self.closeTestData = self.getData()
+        self.train_length = train_length
+        self.closeData, self.closeTrainData, self.closeTestData = self.getData('Close')
+        self.openData, self.openTrainData, self.openTestData = self.getData('Open')
         self.startDate = timePeriod[0]
         self.endDate = timePeriod[1]
         self.n_days_test = len(self.closeTestData) 
-        self.trainLength = trainLength
+        
 
     def __str__(self):
         return self.name + " from " + str(self.startDate) + " to " + str(self.endDate)
 
-    def getData(self):
+    def getData(self, cat='Close'):
         path = "C:\\Users\\x92423\Documents\\Thesis Data Grab\\" + str(self.name) + ".csv" 
         series = pd.read_csv(path, parse_dates=[0], index_col=0)
-        series = series.drop(columns=['Open', 'High', 'Low', 'Adj Close', 'Volume']).dropna()
+        columnsToDrop = ['Close', 'Open', 'High', 'Low', 'Adj Close', 'Volume']
+        columnsToDrop.remove(cat)
+        print(columnsToDrop)
+        series = series.drop(columns=columnsToDrop).dropna()
+        if self.train_length > 0:
+            row = 0
+            for i in series.index.tolist():
+                if i == self.timePeriod[0]:
+                    break
+                else:
+                    row += 1
+            print(row)
+            series = series.iloc[row-self.train_length:]
+            #TODO : WHY DOES THIS NOT WORK
         test_series = series[self.timePeriod[0]:self.timePeriod[1]]
+        print(test_series)
         train_series = series[:self.timePeriod[0]]
-        #if trainLength >= 0:
-        #    train_series = train_series[-trainLength:]
         return  series, train_series, test_series
 
     def getDayPriceClose(self, i):
