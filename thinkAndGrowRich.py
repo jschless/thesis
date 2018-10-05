@@ -73,12 +73,12 @@ class Simulation:
                     #print("daily cap is " + str(cash))
                     principal -= dailyCap
                     py = pYields[i]
-                    stockPrice = stock.getDayPrice(i)
+                    stockPrice = stock.getDayPriceClose(i)
                     #print('day ' + str(i))
                     cash, acctStock = self.buyOrSell(py, cash, acctStock, stockPrice)
                     acctValue = cash+principal+acctStock*stockPrice
                     #print('total acct value at day ' + str(i) + ' = ' + str(acctValue))
-                    snapshots.append((stock.testData.index[i], acctValue))
+                    snapshots.append((stock.closeTestData.index[i], acctValue))
                 print("Investing $" + str(self.principal) + " in " + stock.name + " using " + mod.name + ' from ' + str(stock.startDate) + ' to ' + str(stock.endDate) + ' yielded %' + str(100*(acctValue-self.principal)/self.principal))
                 self.accounts[mod.name][stock.name] = snapshots
                 
@@ -121,7 +121,7 @@ class Simulation:
             ys = []
             for i in range(stock.n_days_test):
                 xs.append(stock.startDate+datetime.timedelta(days=i))
-                ys.append(stock.getDayPrice(i))
+                ys.append(stock.getDayPriceClose(i))
                 #plt.scatter(xs, ys)
                 plt.plot(xs, ys, label=stock.name)
                 plt.title("Time Series of " + stock.name + " from " + str(stock.startDate) + " to " + str(stock.endDate))
@@ -152,7 +152,8 @@ def tester():
     models = ['LASSO', 'DCA']#, 'LASSO', 'RIDGE']
     timeFrame = (datetime.date(2009,6,20), datetime.date(2009,8,20))
     principal = 35000
-    test = Simulation(stocks, models, timeFrame, principal, validation_freq=10)
+    validations = 10
+    test = Simulation(stocks, models, timeFrame, principal, validation_freq=validations)
     test.run()
     test.visualize()
 

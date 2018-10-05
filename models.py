@@ -39,10 +39,10 @@ class Stock:
     def __init__(self, name, timePeriod, trainLength = -1):
         self.name = name
         self.timePeriod = timePeriod
-        self.data, self.trainData, self.testData = self.getData()
+        self.closeData, self.closeTrainData, self.closeTestData = self.getData()
         self.startDate = timePeriod[0]
         self.endDate = timePeriod[1]
-        self.n_days_test = len(self.testData) 
+        self.n_days_test = len(self.closeTestData) 
         self.trainLength = trainLength
 
     def __str__(self):
@@ -58,8 +58,8 @@ class Stock:
         #    train_series = train_series[-trainLength:]
         return  series, train_series, test_series
 
-    def getDayPrice(self, i):
-        return self.testData.iloc[i]['Close']
+    def getDayPriceClose(self, i):
+        return self.closeTestData.iloc[i]['Close']
 
 
 class Model:
@@ -100,7 +100,7 @@ class Model:
         combinations = self.generateCombinations(self.param_ranges)
         bestParams = []
         bestScore = -100
-        X = self.stock.data[:day]
+        X = self.stock.closeData[:day]
         if not kfold:
             self.initMod(X, self.params)
             self.fit(self.laggedData, X.iloc[self.lag_n:])
@@ -108,7 +108,7 @@ class Model:
         for combo in combinations:
             total = 0
             self.initMod(X, combo)
-            y = self.stock.data[:day].iloc[self.lag_n:]
+            y = self.stock.closeData[:day].iloc[self.lag_n:]
             for train_index, test_index in kf.split(self.laggedData):                
                 X_train, X_test = self.laggedData.iloc[train_index], self.laggedData.iloc[test_index]
                 y_train, y_test = y.iloc[train_index], y.iloc[test_index]
@@ -156,14 +156,14 @@ class Model:
         pYields = []
         #self.validate(self.stock.testData.index[0]) #validate off of the first day
         validationDays = self.numValidations(validationFreq)
-        for i in range(len(self.stock.testData)):
-            day = self.stock.testData.index[i]
+        for i in range(len(self.stock.closeTestData)):
+            day = self.stock.closeTestData.index[i]
             if i in validationDays:
                 self.validate(day, kfold=True)
             else:
                 self.validate(day, kfold=False)
             predictY = self.mod.predict(self.laggedData[day:day])
-            actualY = self.stock.testData.iloc[i]['Close']
+            actualY = self.stock.closeTestData.iloc[i]['Close']
             pYield = (predictY-actualY)/actualY
             pYields.append(pYield[0])
         return pYields
@@ -229,14 +229,14 @@ class ARIMAModel(Model):
         return "ARIMA"
 
     def getYields(self, validationFreq = 0):
-        history = [x for x in self.stock.trainData]
+        history = [x for x in self.stock.closeTrainData]
         pYields = []
-        for i in range(len(self.stock.testData)):
+        for i in range(len(self.stock.closeTestData)):
             self.mod = ARIMA(history, order=(self.p,self.p,self.q))
             model_fit = self.mod.fit(disp=-1)
             output = model_fit.forecast()
             predictY = output[0]
-            actualY = self.stock.testData.iloc[i]['Close']
+            actualY = self.stock.closeTestData.iloc[i]['Close']
             pYield = (predictY-actualY)/actualY
             pYields.append(pYield)
             history.append(actualY)
