@@ -83,6 +83,7 @@ class Model:
         
 
     def initMod(self, data, params):
+        self.params = params
         self.lag_n = params['lag']
         self.lag = TimeLag(self.lag_n)
         self.laggedData = self.lag.transform(data)
@@ -94,12 +95,16 @@ class Model:
     output:
     model fit according to best parameters
     '''
-    def validate(self, day, n_splits = 2):        
+    def validate(self, day, n_splits = 2, kfold = True):        
         kf = KFold(n_splits=2)
         combinations = self.generateCombinations(self.param_ranges)
         bestParams = []
         bestScore = -100
         X = self.stock.data[:day]
+        if not kfold:
+            self.initMod(X, self.params)
+            self.fit(self.laggedData, X.iloc[self.lag_n:])
+            return
         for combo in combinations:
             total = 0
             self.initMod(X, combo)
@@ -132,11 +137,19 @@ class Model:
         #print('potential param options: ' + str(comboDicts))
         return comboDicts
 
-    def getYields(self):
+    '''
+    inputs:
+    kfolds: number of validations to do
+    '''
+    def getYields(self, validationDays=[]):
         pYields = []
+        self.validate(self.stock.testData.index[0]) #validate off of the first day
         for i in range(len(self.stock.testData)):
             day = self.stock.testData.index[i]
-            self.validate(day)
+            if i in validationDays:
+                self.validate(day, kfold=True)
+            else:
+                self.validate(day, kfold=False)
             predictY = self.mod.predict(self.laggedData[day:day])
             actualY = self.stock.testData.iloc[i]['Close']
             pYield = (predictY-actualY)/actualY
