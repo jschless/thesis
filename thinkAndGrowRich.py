@@ -150,7 +150,7 @@ class Simulation:
 def tester():
     stocks = ['AAPL']
     models = ['LINREG', 'DCA']#, 'LASSO', 'RIDGE']
-    timeFrame = (datetime.date(2009,6,20), datetime.date(2017,8,20))
+    timeFrame = (datetime.date(2009,6,20), datetime.date(2009,8,20))
     principal = 35000
     test = Simulation(stocks, models, timeFrame, principal)
     test.run()

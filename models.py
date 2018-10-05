@@ -51,7 +51,7 @@ class Stock:
     def getData(self):
         path = "C:\\Users\\x92423\Documents\\Thesis Data Grab\\" + str(self.name) + ".csv" 
         series = pd.read_csv(path, parse_dates=[0], index_col=0)
-        series = series.drop(columns=['Open', 'High', 'Low', 'Adj Close', 'Volume'])#test_set
+        series = series.drop(columns=['Open', 'High', 'Low', 'Adj Close', 'Volume']).dropna()
         test_series = series[self.timePeriod[0]:self.timePeriod[1]]
         train_series = series[:self.timePeriod[0]]
         #if trainLength >= 0:
@@ -108,7 +108,6 @@ class Model:
                 X_train, X_test = self.laggedData.iloc[train_index], self.laggedData.iloc[test_index]
                 y_train, y_test = y.iloc[train_index], y.iloc[test_index]
                 self.fit(X_train, y_train)
-                print(X_test)
                 total += self.score(X_test, y_test)
             if total/n_splits > bestScore:
                 bestScore = total/n_splits
