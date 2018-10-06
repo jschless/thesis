@@ -67,6 +67,9 @@ class Stock:
     def getDayPriceClose(self, i):
         return self.closeTestData.iloc[i]['Close']
 
+    def getDayPriceOpen(self, i):
+        return self.openTestData.iloc[i]['Open']
+
 
 class Model:
     def __init__(self, params={'lag':5}, param_ranges={'lag':range(2,20,2)}):
