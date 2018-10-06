@@ -57,18 +57,11 @@ class Stock:
         columnsToDrop.remove(cat)
         print(columnsToDrop)
         series = series.drop(columns=columnsToDrop).dropna()
+        startTest = 0
+        startTrain = 0
         if self.train_length > 0:
-            row = 0
-            for i in series.index.tolist():
-                if i == self.timePeriod[0]:
-                    break
-                else:
-                    row += 1
-            print(row)
-            series = series.iloc[row-self.train_length:]
-            #TODO : WHY DOES THIS NOT WORK
-        test_series = series[self.timePeriod[0]:self.timePeriod[1]]
-        print(test_series)
+            series = series[self.timePeriod[0]-datetime.timedelta(days=self.train_length):self.timePeriod[1]]
+        test_series = series.loc[self.timePeriod[0]:]
         train_series = series[:self.timePeriod[0]]
         return  series, train_series, test_series
 
