@@ -20,24 +20,24 @@ from sklearn.linear_model import Ridge
 from models import *
 
 class Simulation:
-    def __init__(self, stocks, models, timeFrame, principal, validation_freq=0):
+    def __init__(self, stocks, models, timeFrame, principal, validation_freq=0, train_length=-1):
         self.timeFrame = timeFrame
-        self.stocks = self.init_stocks(stocks)
+        self.stocks = self.init_stocks(stocks, train_length)
         self.models = self.init_models(models)
         self.principal = principal
         self.accounts = self.init_accounts()
         self.validation_freq = validation_freq
-
+        self.train_length = train_length
     def init_accounts(self):
         accts = {}
         for mod in self.models:
             accts[mod.name] = {}
         return accts
                 
-    def init_stocks(self, stocks):
+    def init_stocks(self, stocks, train_length):
         temp = []
         for stock in stocks:
-            temp.append(Stock(stock, self.timeFrame))
+            temp.append(Stock(stock, self.timeFrame, train_length = train_length))
         return temp
     
     def init_models(self, models):
@@ -73,12 +73,12 @@ class Simulation:
                     #print("daily cap is " + str(cash))
                     principal -= dailyCap
                     py = pYields[i]
-                    stockPrice = stock.getDayPrice(i) #should be open price of day i
+                    stockPrice = stock.getDayPriceClose(i)
                     #print('day ' + str(i))
                     cash, acctStock = self.buyOrSell(py, cash, acctStock, stockPrice)
                     acctValue = cash+principal+acctStock*stockPrice
                     #print('total acct value at day ' + str(i) + ' = ' + str(acctValue))
-                    snapshots.append((stock.testData.index[i], acctValue))
+                    snapshots.append((stock.closeTestData.index[i], acctValue))
                 print("Investing $" + str(self.principal) + " in " + stock.name + " using " + mod.name + ' from ' + str(stock.startDate) + ' to ' + str(stock.endDate) + ' yielded %' + str(100*(acctValue-self.principal)/self.principal))
                 self.accounts[mod.name][stock.name] = snapshots
                 
@@ -121,7 +121,7 @@ class Simulation:
             ys = []
             for i in range(stock.n_days_test):
                 xs.append(stock.startDate+datetime.timedelta(days=i))
-                ys.append(stock.getDayPrice(i))
+                ys.append(stock.getDayPriceClose(i))
                 #plt.scatter(xs, ys)
                 plt.plot(xs, ys, label=stock.name)
                 plt.title("Time Series of " + stock.name + " from " + str(stock.startDate) + " to " + str(stock.endDate))
@@ -152,7 +152,9 @@ def tester():
     models = ['LASSO', 'DCA']#, 'LASSO', 'RIDGE']
     timeFrame = (datetime.date(2009,6,20), datetime.date(2009,8,20))
     principal = 35000
-    test = Simulation(stocks, models, timeFrame, principal, validation_freq=10)
+    validations = 10
+    train_length = 100
+    test = Simulation(stocks, models, timeFrame, principal, validation_freq=validations, train_length = train_length)
     test.run()
     test.visualize()
 
