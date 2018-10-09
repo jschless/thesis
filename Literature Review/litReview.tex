@@ -60,7 +60,7 @@ Investing is a complicated subject. There are a number of different types of fin
 A stock is a piece of some public company. A public company means it is traded publicly; anyone may purchase a share giving them partial ownership of the company. The stock market is open from 8:00 AM to 4:00 PM, at which point differing volumes of trading occur. 
 
 \subsection{Dollar Cost Averaging}
-Dollar cost averaging is a popular investment strategy. It comes from the wisdom that the stock market is unpredictable; as in, the investor has no way of knowing what will happen. By investing some fixed amount at a regular interval, the investor averages out the risk and will gain, on average, whatever the stock makes. This phenomenon can be seen in Figure \ref{dca}. Dollar Cost Averaging is the standard of comparison for investment strategies. For this project, I am rejecting the practical wisdom that the stock market is unpredictable; through statistical learning, I hope to design an investment strategy that outperforms dollar cost averaging.
+Dollar cost averaging is a popular investment strategy. It comes from the wisdom that the stock market is unpredictable; in other words, the investor has no way of knowing whether the stock value will increase or decrease. By investing some fixed amount at a regular interval, the investor averages out the risk and will gain, on average, whatever the stock makes. This phenomenon can be seen in Figure \ref{dca}. Dollar Cost Averaging is the standard of comparison for investment strategies. For this project, I am rejecting the practical wisdom that the stock market is unpredictable; through statistical learning, I hope to design an investment strategy that outperforms dollar cost averaging.
 
 \begin{figure}[ht]
 	\centering
@@ -70,7 +70,7 @@ Dollar cost averaging is a popular investment strategy. It comes from the wisdom
 \end{figure}
 
 \subsection{Practical Assumptions}
-In an effort to transform the financial world into a more wieldy dataset for academic research, I have made a few simplifying assumptions.
+In an effort to transform the financial world into a more reasonable object for academic research, I have made a few simplifying assumptions.
 \begin{itemize}
 	\item Trades occur instantly and at the beginning of the day. The investment algorithm purchases at the exact price the stock closed at the previous day. This is unrealistic to some extent because in order to purchase some number of shares at some price, there has to be another owner willing to sell those shares at that price, which is not always the case. However, this assumption is consistent across both the statistical investment methods and dollar cost averaging standard of comparison.
 	
@@ -144,10 +144,10 @@ $x'_t$ refers to the differenced series. This comes from the "integrated" part o
 
 
 \section{Machine Learning} 
-At its core, machine learning is a subset of data science. Through statistical methods, we can analyze the 
+At its core, machine learning is a subset of data science. Through statistical methods, we can glean insights about some data set. While machine learning is often associated with mysterious terms like neural networks, artificial intelligence, and deep learning, it is important to note that these methods of machine learning are grounded in rigorous statistics and mathematics just as more rudimentary methods like linear regression are.
 
 \subsection{Regression v. Classification}
-Machine learning breaks down into two main subsets: regression and classification. The distinction between the two subsets lies in the output type. While some models seek to predict a quantitative measurement based on the input, others may want to predict a qualitative measurement; models with quantitative outputs are regression and models with qualitative outputs are classification. \cite[9-10]{springer} When looking at stock time series data, a regression model would seek to forecast what the price of the stock will be the following day, while a classification model might seek to determine whether the stock will go up or down. 
+Machine learning breaks down into two main subsets: regression and classification. The distinction between the two subsets lies in the output type. While some models seek to predict a quantitative measurement based on the input, others may want to predict a qualitative measurement; models with quantitative outputs are regression and models with qualitative outputs are classification. \cite[9-10]{springer} When looking at stock time series data, a regression model would seek to forecast what the price of the stock will be the following day, while a classification model might seek to determine whether the stock will go up, down or stay the same. 
 
 \subsection{Linear Models}
 Linear models are one of the simplest approaches to prediction. Given a vector of inputs 
@@ -211,7 +211,7 @@ The sigmoid function simply takes an input $v$ and maps it between 0 and 1, as s
 From this set of hidden layer values $U = \{u_j\}$, we can generate output.
 
 Each output node $u'_k$ has its own set of weights $\beta_k$ for the hidden layer nodes as well as a bias $\mu_k$. 
-When to generate output, the output node applies some function $g_k$ to the linear combination of weights and hidden layer values.
+When generating output, the output node applies some function $g_k$ to the linear combination of weights and hidden layer values.
 
 $$u'_k = g_k( \mu_k + \sum_{i=0}^{J} \beta_ji u_j)$$
 
@@ -245,7 +245,7 @@ Often the challenge with learning through statistical models is a shortage of da
 	\label{test_train}
 \end{figure}
 
-This test set is untouched until the end when you evaluate the models performance on the data set. Thus, we already have a diminished data set when we are trying to train the model. There are useful methods to get the most out of your training set and tune hyperparameters. One such method is K-fold cross validation graphically depicted in Figure \ref{kfold}. KFold could be used to select $\lambda$ in Ridge regression, before training the model on the entire training set using the optimal $\lambda$.
+This test set is untouched until the end when you evaluate the models performance on the data set. Thus, we already have a diminished data set when we are trying to train the model. There are useful methods to get the most out of your training set and tune hyperparameters. One such method is K-fold cross validation graphically depicted in Figure \ref{kfold}. KFold could be used to select $\lambda$ in Ridge regression, before training the model on the entire training set using the determined optimal $\lambda$.
 
 \begin{figure}[ht]
 	\centering
