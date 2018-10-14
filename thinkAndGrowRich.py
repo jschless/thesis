@@ -104,17 +104,27 @@ class Simulation:
     def simplePlotInvestments(self, individual=True):
         stockToStrat = self.invertDict()
         for stock, s in stockToStrat.items():
+            thisStock = None
+            for stck in self.stocks:
+                if stock == stck.name:
+                    thisStock= stck
+                    break
+            xs = thisStock.closeTestData.index.tolist()
+            ys = thisStock.closeTestData['Close']
+            fig, ax = plt.subplots(2, 1, sharex=True)
             for strat, data in s.items():
                 timeseries = data
                 #plt.scatter(*zip(*timeseries))#, label=stock+"-"+strat)
-                plt.plot(*zip(*timeseries), label=stock+"-"+strat)
-                plt.title("Performance of investing $" + str(self.principal))# + " in " + stock + " using " + strat)
-                plt.ylabel("Portfolio value")
-                plt.xlabel("Time")
-                plt.legend()#loc='upper left')
-                if individual:
-                    plt.figure()                 
-     
+                ax[0].plot(*zip(*timeseries), label=stock+"-"+strat)
+                ax[1].plot(xs, ys)
+                ax[0].set_title("Performance of investing $" + str(self.principal))# + " in " + stock + " using " + strat)
+                ax[0].set(ylabel="Portfolio value")
+                ax[1].set(xlabel= "Time", ylabel="Stock price")
+            ax[0].legend()#loc='upper left')
+            fig.autofmt_xdate()
+        plt.show()
+            
+                
     def simplePlotStocks(self, individual=True):
         for stock in self.stocks:
             xs = []
@@ -127,11 +137,11 @@ class Simulation:
                 plt.title("Time Series of " + stock.name + " from " + str(stock.startDate) + " to " + str(stock.endDate))
                 plt.xlabel("Date")
                 plt.ylabel("Closing price")
-                plt.show()
-            if individual:
-                plt.figure()
-            else:
-                plt.legend()#loc='upper left')
+                #plt.show()
+            #if individual:
+            #    plt.figure()
+            #else:
+            #    plt.legend()#loc='upper left')
         
     '''
     inputs:
@@ -143,19 +153,16 @@ class Simulation:
     '''
     def visualize(self, individualStocks=False, individualInvest=False):
         self.simplePlotInvestments(individual=individualInvest)
-        plt.show()
-       # plt.figure()
-       # self.simplePlotStocks()
         
 def tester():
-    stocks = ['AAPL']
-    models = ['LASSO', 'DCA']#, 'LASSO', 'RIDGE']
-    timeFrame = (datetime.date(2009,6,20), datetime.date(2009,8,20))
+    stocks = ['BA', 'GOOG']
+    models = ['LASSO', 'DCA']#, 'RIDGE', 'LINREG']#, 'LASSO', 'RIDGE']
+    timeFrame = (datetime.date(2015,6,20), datetime.date(2015,8,20))
     principal = 35000
     validations = 10
     train_length = 100
     test = Simulation(stocks, models, timeFrame, principal, validation_freq=validations, train_length = train_length)
     test.run()
-    test.visualize()
+    test.visualize(individualInvest=True)
 
 tester()

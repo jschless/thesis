@@ -53,14 +53,18 @@
 \section{Introduction}
 For this research project, I am exploring applying statistical learning techniques to time series analysis. Specifically, I am looking at financial data, or stock prices, as the time series of interest. The following literature review will examine the basics of investing, and provide a cursory overview of the classical methods of time series analysis and machine learning.
 
+For this project, I am rejecting the practical wisdom that the stock market is unpredictable; through statistical learning, I hope to design an investment strategy that outperforms dollar cost averaging, which will be explained later.
+
 \section{Basics of Investing}
 Investing is a complicated subject. There are a number of different types of financial assets, trades, investment strategies, and risk measurements. For the purposes of this project, we will simplify financial markets significantly. 
 
 \subsection{Stocks}
+Stocks are the most basic element of the financial market. By owning a stock, you own part of some company. A public company is divided into shares through an initial public offering. If you own one stock of Google, you own some neglible percent of that company.
+
 A stock is a piece of some public company. A public company means it is traded publicly; anyone may purchase a share giving them partial ownership of the company. The stock market is open from 8:00 AM to 4:00 PM, at which point differing volumes of trading occur. 
 
 \subsection{Dollar Cost Averaging}
-Dollar cost averaging is a popular investment strategy. It comes from the wisdom that the stock market is unpredictable; in other words, the investor has no way of knowing whether the stock value will increase or decrease. By investing some fixed amount at a regular interval, the investor averages out the risk and will gain, on average, whatever the stock makes. This phenomenon can be seen in Figure \ref{dca}. Dollar Cost Averaging is the standard of comparison for investment strategies. For this project, I am rejecting the practical wisdom that the stock market is unpredictable; through statistical learning, I hope to design an investment strategy that outperforms dollar cost averaging.
+Dollar cost averaging is a popular investment strategy. It comes from the wisdom that the stock market is unpredictable; in other words, the investor has no way of knowing whether the stock value will increase or decrease. By investing some fixed amount at a regular interval, the investor averages out the risk and will gain, on average, whatever the stock makes. This phenomenon can be seen in Figure \ref{dca}. Dollar Cost Averaging is the standard of comparison for investment strategies. 
 
 \begin{figure}[ht]
 	\centering
@@ -76,9 +80,11 @@ In an effort to transform the financial world into a more reasonable object for 
 	
 	\item There is no transaction fee, which is not the case when trading. Typically, investors pay some fixed fee to the brokerage firm for completing the transaction. Again, because this is a consistent assumption in the dollar cost average baseline, this will not affect the comparison.
 			
+			
+	\item We are assuming that the stock market has some degree of predictability. In particular, we assume that the future value of a stock can generally be predicted by the recent history of the stock.
 \end{itemize}
 \section{Time Series Analysis}
-Stock data examined over time forms a time series. Explicitly, we have some series $\{X_t\} = \{x_1, x_2, \dots, x_n\}$ where $x_t$ is some $m$-dimensional vector corresponding to the $t$th day of a stock. We are concerned with forecasting the price of a stock for the next day. Given $\{X_t\}$, can we predict $x_{t+1}$?
+Stock data examined over time forms a time series. Explicitly, we have some series $\{X_t\} = \{x_1, x_2, \dots, x_n\}$ where $x_t$ is some vector corresponding to the $t$th day of a stock. We are concerned with forecasting the price of a stock for the next day. Given $\{X_t\}$, can we predict $x_{t+1}$?
 
 \subsection{Stationary Models}  
 A time series is stationary if it has similar statistical properties at $\{X_t\}$ and at $\{X_{t+h}\}$ for some $h$. For a more mathematically rigorous definition of stationary, we need to define some additional functions.
