@@ -85,14 +85,22 @@ class Simulation:
                 self.accounts[mod.name][stock.name] = (snapshots, investments)
                 
                 
-    def buyOrSell(self, py, cash, stock, price):
+    def buyOrSell(self, py, cash, stock, price, alpha=1, beta=1):
         #print("percent yield: " + str(py))
+        percent = py*alpha
         if py > 0:
             #print("buying $" + str(cash*py) + " at " + str(price))
-            return cash-py*cash, stock+py*cash/price, py*cash
+
+            if percent > 1:
+                print("[warning] attempting to spend more cash than you have. Spending all")
+                percent = 1
+            return cash-percent*cash, stock+percent*cash/price, percent*cash
         else:
             #print("selling " + str(stock*py) + " shares at " + str(price))
-            return cash-py*stock*price, stock-py*stock, py*cash
+            if percent < -1:
+                print("[warning] attempting to sell mroe stock than you have. Selling all")
+                percent = -1
+            return cash-py*alpha*stock*price, stock-py*alpha*stock, py*alpha*cash
 
     def invertDict(self):
         inverted = {}
