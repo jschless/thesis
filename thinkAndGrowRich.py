@@ -68,6 +68,7 @@ class Simulation:
                 principal, acctStock = self.principal, 0
                 acctValue = principal
                 snapshots = []
+                investments = []
                 for i in range(n_days):
                     cash += dailyCap
                     #print("daily cap is " + str(cash))
@@ -75,22 +76,23 @@ class Simulation:
                     py = pYields[i]
                     stockPrice = stock.getDayPriceOpen(i)
                     #print('day ' + str(i))
-                    cash, acctStock = self.buyOrSell(py, cash, acctStock, stockPrice)
+                    cash, acctStock, moneySpent = self.buyOrSell(py, cash, acctStock, stockPrice)
                     acctValue = cash+principal+acctStock*stockPrice
                     #print('total acct value at day ' + str(i) + ' = ' + str(acctValue))
                     snapshots.append((stock.closeTestData.index[i], acctValue))
+                    investments.append(moneySpent)
                 print("Investing $" + str(self.principal) + " in " + stock.name + " using " + mod.name + ' from ' + str(stock.startDate) + ' to ' + str(stock.endDate) + ' yielded %' + str(100*(acctValue-self.principal)/self.principal))
-                self.accounts[mod.name][stock.name] = snapshots
+                self.accounts[mod.name][stock.name] = (snapshots, investments)
                 
                 
     def buyOrSell(self, py, cash, stock, price):
         #print("percent yield: " + str(py))
         if py > 0:
             #print("buying $" + str(cash*py) + " at " + str(price))
-            return cash-py*cash, stock+py*cash/price
+            return cash-py*cash, stock+py*cash/price, py*cash
         else:
             #print("selling " + str(stock*py) + " shares at " + str(price))
-            return cash-py*stock*price, stock-py*stock
+            return cash-py*stock*price, stock-py*stock, py*cash
 
     def invertDict(self):
         inverted = {}
@@ -113,10 +115,19 @@ class Simulation:
             ys = thisStock.closeTestData['Close']
             fig, ax = plt.subplots(2, 1, sharex=True)
             for strat, data in s.items():
-                timeseries = data
-                #plt.scatter(*zip(*timeseries))#, label=stock+"-"+strat)
+                timeseries, investments = data
                 ax[0].plot(*zip(*timeseries), label=stock+"-"+strat)
                 ax[1].plot(xs, ys)
+                yieldColors = []
+                investments
+                for i in investments:
+                    if i >= 0:
+                        yieldColors.append('green')
+                    else:
+                        yieldColors.append('red')
+                investments = [abs(x) for x in investments]
+                investments = [2*100*x/max(investments) for x in investments]
+                ax[0].scatter(*zip(*timeseries), s=investments, c=yieldColors)
                 ax[0].set_title("Performance of investing $" + str(self.principal))# + " in " + stock + " using " + strat)
                 ax[0].set(ylabel="Portfolio value")
                 ax[1].set(xlabel= "Time", ylabel="Stock price")
