@@ -20,14 +20,16 @@ from sklearn.linear_model import Ridge
 from models import *
 
 class Simulation:
-    def __init__(self, stocks, models, timeFrame, principal, validation_freq=0, train_length=-1):
+    def __init__(self, stocks, models, timeFrame, principal, validation_freq=0, train_length=-1, debug=False):
         self.timeFrame = timeFrame
         self.stocks = self.init_stocks(stocks, train_length)
-        self.models = self.init_models(models)
+        self.models = self.init_models(models, ver=debug)
         self.principal = principal
         self.accounts = self.init_accounts()
         self.validation_freq = validation_freq
         self.train_length = train_length
+        self.debug = debug
+#        self.results = Results()
     def init_accounts(self):
         accts = {}
         for mod in self.models:
@@ -40,24 +42,24 @@ class Simulation:
             temp.append(Stock(stock, self.timeFrame, train_length = train_length))
         return temp
     
-    def init_models(self, models):
+    def init_models(self, models, ver):
         temp = []
         for mod in models:
             if mod == 'LINREG':
-                temp.append(Model())
+                temp.append(Model(debug=ver))
             elif mod == 'DCA':
-                temp.append(DCA())
+                temp.append(DCA(debug=ver))
             elif mod == 'LASSO':
-                temp.append(LassoModel())
+                temp.append(LassoModel(debug=ver))
             elif mod == 'RIDGE':
-                temp.append(RidgeModel())
+                temp.append(RidgeModel(debug=ver))
             elif mod == 'MLP':
-                temp.append(MLP())
+                temp.append(MLP(debug=ver))
             elif mod == 'ARIMA':
-                temp.append(ARIMAModel())
+                temp.append(ARIMAModel(debug=ver))
         return temp
 
-    def run(self):
+    def run(self, alphas=[1]):
         for mod in self.models:
             for stock in self.stocks:
                 mod.addStock(stock)
@@ -69,20 +71,19 @@ class Simulation:
                 acctValue = principal
                 snapshots = []
                 investments = []
-                for i in range(n_days):
-                    cash += dailyCap
-                    #print("daily cap is " + str(cash))
-                    principal -= dailyCap
-                    py = pYields[i]
-                    stockPrice = stock.getDayPriceOpen(i)
-                    #print('day ' + str(i))
-                    cash, acctStock, moneySpent = self.buyOrSell(py, cash, acctStock, stockPrice)
-                    acctValue = cash+principal+acctStock*stockPrice
-                    #print('total acct value at day ' + str(i) + ' = ' + str(acctValue))
-                    snapshots.append((stock.closeTestData.index[i], acctValue))
-                    investments.append(moneySpent)
+                for a in alphas:
+                    for i in range(n_days):
+                        cash += dailyCap
+                        principal -= dailyCap
+                        py = pYields[i]
+                        stockPrice = stock.getDayPriceOpen(i)
+                        cash, acctStock, moneySpent = self.buyOrSell(py, cash, acctStock, stockPrice, alpha=a)
+                        acctValue = cash+principal+acctStock*stockPrice
+                        #print('total acct value at day ' + str(i) + ' = ' + str(acctValue))
+                        snapshots.append((stock.closeTestData.index[i], acctValue))
+                        investments.append(moneySpent)
                 print("Investing $" + str(self.principal) + " in " + stock.name + " using " + mod.name + ' from ' + str(stock.startDate) + ' to ' + str(stock.endDate) + ' yielded %' + str(100*(acctValue-self.principal)/self.principal))
-                self.accounts[mod.name][stock.name] = (snapshots, investments)
+                self.accounts[mod.name][stock.name] = (snapshots, investments, a)
                 
                 
     def buyOrSell(self, py, cash, stock, price, alpha=1, beta=1):
@@ -123,7 +124,7 @@ class Simulation:
             ys = thisStock.closeTestData['Close']
             fig, ax = plt.subplots(2, 1, sharex=True)
             for strat, data in s.items():
-                timeseries, investments = data
+                timeseries, investments, alpha = data
                 ax[0].plot(*zip(*timeseries), label=stock+"-"+strat)
                 ax[1].plot(xs, ys)
                 yieldColors = []
@@ -172,7 +173,10 @@ class Simulation:
     '''
     def visualize(self, individualStocks=False, individualInvest=False):
         self.simplePlotInvestments(individual=individualInvest)
-        
+
+#class Results():
+    
+
 def tester():
     stocks = ['BA', 'GOOG']
     models = ['LASSO', 'DCA']#, 'RIDGE', 'LINREG']#, 'LASSO', 'RIDGE']
@@ -180,7 +184,7 @@ def tester():
     principal = 35000
     validations = 10
     train_length = 100
-    test = Simulation(stocks, models, timeFrame, principal, validation_freq=validations, train_length = train_length)
+    test = Simulation(stocks, models, timeFrame, principal, validation_freq=validations, train_length = train_length, debug=True)
     test.run()
     test.visualize(individualInvest=True)
 

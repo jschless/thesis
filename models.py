@@ -36,7 +36,7 @@ class TimeLag:
         return X.iloc[self.n:]
 
 class Stock:
-    def __init__(self, name, timePeriod, train_length = -1):
+    def __init__(self, name, timePeriod, train_length = -1, debug=False):
         self.name = name
         self.timePeriod = timePeriod
         self.train_length = train_length
@@ -45,7 +45,7 @@ class Stock:
         self.startDate = timePeriod[0]
         self.endDate = timePeriod[1]
         self.n_days_test = len(self.closeTestData) 
-        
+        self.debug = debug
 
     def __str__(self):
         return self.name + " from " + str(self.startDate) + " to " + str(self.endDate)
@@ -72,12 +72,12 @@ class Stock:
 
 
 class Model:
-    def __init__(self, params={'lag':5}, param_ranges={'lag':range(2,20,2)}):
+    def __init__(self, params={'lag':5}, param_ranges={'lag':range(2,20,2)}, debug=False):
         self.mod = LinearRegression()   
         self.name = 'LINREG'
         self.params = params
         self.param_ranges = param_ranges
-
+        self.debug = debug
     def __str__(self):
         return "Linear Regression Model"
         
@@ -123,11 +123,13 @@ class Model:
                 y_train, y_test = y.iloc[train_index], y.iloc[test_index]
                 self.fit(X_train, y_train)
                 total += self.score(X_test, y_test)
-            print("total score: " + str(total) + "   for params: " + str(combo) + "   avg score: " + str(total/n_splits))
+            if self.debug:
+                print("total score: " + str(total) + "   for params: " + str(combo) + "   avg score: " + str(total/n_splits))
             if total/n_splits > bestScore:
                 bestScore = total/n_splits
                 bestParams = combo
-        print("model validated, chosing params: " + str(bestParams))
+        if self.debug:
+            print("model validated, chosing params: " + str(bestParams))
         self.initMod(X, bestParams)
         self.fit(self.laggedData, X.iloc[self.lag_n:])
 
@@ -178,13 +180,13 @@ class Model:
         return pYields
 
 class LassoModel(Model):
-    def __init__(self, params = {'alpha': 1.0, 'lag':5}, param_ranges = {'alpha': np.logspace(-2,1,num=4), 'lag':range(2,10,4)}):
+    def __init__(self, params = {'alpha': 1.0, 'lag':5}, param_ranges = {'alpha': np.logspace(-2,1,num=4), 'lag':range(2,10,4)}, debug=False):
         self.a = params['alpha']
         self.mod = Lasso(self.a)
         self.name = 'LASSO'
         self.params = params
         self.param_ranges = param_ranges
-
+        self.debug = debug
     def initMod(self, data, params):
         self.lag_n = params['lag']
         self.lag = TimeLag(self.lag_n)
@@ -196,18 +198,18 @@ class LassoModel(Model):
         return "Lasso Regression Model"
 
 class RidgeModel(Model):
-    def __init__(self, params = {'alpha': 1.0, 'lag':5}, param_ranges = {'alpha': np.logspace(-2,1,num=4), 'lag':range(2,10,2)}):
+    def __init__(self, params = {'alpha': 1.0, 'lag':5}, param_ranges = {'alpha': np.logspace(-2,1,num=4), 'lag':range(2,10,2)}, debug=False):
         self.a = params['alpha']
         self.mod = Ridge(self.a)
         self.params = params
         self.param_ranges = param_ranges
         self.name = 'RIDGE'
-
+        self.debug = debug
     def __str__(self):
         return "Ridge Regression Model"
 
 class DCA(Model):
-    def __init__(self, interval=5):
+    def __init__(self, interval=5, debug=False):
         self.name = 'DCA'
         self.interval = interval
     def __str__(self):
@@ -226,14 +228,14 @@ class DCA(Model):
         return list(map(lambda a : a/total, pYields))
 
 class ARIMAModel(Model):
-    def __init__(self, n=1, p=0, q=0, params = {}, param_ranges = {}):
+    def __init__(self, n=1, p=0, q=0, params = {}, param_ranges = {}, debug=False):
         self.n=n
         self.p=p
         self.q=q
         self.name='ARIMA'
         self.params = params
         self.param_ranges = param_ranges
-
+        self.debug = debug
     def __str__(self):
         return "ARIMA"
 
@@ -252,7 +254,7 @@ class ARIMAModel(Model):
         return pYields
 
 class MLP(Model):
-    def __init__(self, params = {'hidden layers': (10,), 'alpha':.0001, 'lag': 5}, param_ranges = {'alpha': np.logspace(-5,1, num=4), 'lag' : range(2,10,3)}):
+    def __init__(self, params = {'hidden layers': (10,), 'alpha':.0001, 'lag': 5}, param_ranges = {'alpha': np.logspace(-5,1, num=4), 'lag' : range(2,10,3)}, debug=False):
         self.a = params['alpha']
         self.hidden_layer = params['hidden layers']
         self.lag = TimeLag(params['lag'])
@@ -260,6 +262,7 @@ class MLP(Model):
         self.name = 'MLP'
         self.params = params
         self.param_ranges = param_ranges
+        self.debug = debug
 
     def __str__(self):
         return "Multi-Layer Perceptron Model"
