@@ -20,7 +20,7 @@ from sklearn.linear_model import Ridge
 from models import *
 
 class Simulation:
-    def __init__(self, stocks, models, timeFrame, principal, validation_freq=0, train_length=-1, debug=False):
+    def __init__(self, stocks, models, timeFrame, principal, alphas=[1], validation_freq=0, train_length=-1, debug=False):
         self.timeFrame = timeFrame
         self.stocks = self.init_stocks(stocks, train_length)
         self.models = self.init_models(models, ver=debug)
@@ -28,6 +28,7 @@ class Simulation:
         self.accounts = self.init_accounts()
         self.validation_freq = validation_freq
         self.train_length = train_length
+        self.alphas = alphas
         self.debug = debug
 #        self.results = Results()
     def init_accounts(self):
@@ -59,19 +60,19 @@ class Simulation:
                 temp.append(ARIMAModel(debug=ver))
         return temp
 
-    def run(self, alphas=[1]):
+    def run(self):
         for mod in self.models:
             for stock in self.stocks:
                 mod.addStock(stock)
-                pYields = mod.getYields(self.validation_freq)
-                n_days = stock.n_days_test
-                dailyCap = self.principal/n_days
-                cash = 0
-                principal, acctStock = self.principal, 0
-                acctValue = principal
-                snapshots = []
-                investments = []
-                for a in alphas:
+                for a in self.alphas:
+                    pYields = mod.getYields(self.validation_freq)
+                    n_days = stock.n_days_test
+                    dailyCap = self.principal/n_days
+                    cash = 0
+                    principal, acctStock = self.principal, 0
+                    acctValue = principal
+                    snapshots = []
+                    investments = []
                     for i in range(n_days):
                         cash += dailyCap
                         principal -= dailyCap
@@ -82,7 +83,7 @@ class Simulation:
                         #print('total acct value at day ' + str(i) + ' = ' + str(acctValue))
                         snapshots.append((stock.closeTestData.index[i], acctValue))
                         investments.append(moneySpent)
-                print("Investing $" + str(self.principal) + " in " + stock.name + " using " + mod.name + ' from ' + str(stock.startDate) + ' to ' + str(stock.endDate) + ' yielded %' + str(100*(acctValue-self.principal)/self.principal))
+                    print("Investing $" + str(self.principal) + " in " + stock.name + " using " + mod.name + ' with alpha=' +str(a)+  ' from ' + str(stock.startDate) + ' to ' + str(stock.endDate) + ' yielded %' + str(100*(acctValue-self.principal)/self.principal))
                 self.accounts[mod.name][stock.name] = (snapshots, investments, a)
                 
                 
@@ -125,7 +126,7 @@ class Simulation:
             fig, ax = plt.subplots(2, 1, sharex=True)
             for strat, data in s.items():
                 timeseries, investments, alpha = data
-                ax[0].plot(*zip(*timeseries), label=stock+"-"+strat)
+                ax[0].plot(*zip(*timeseries), label=stock+"-"+strat+"-alpha="+str(alpha))
                 ax[1].plot(xs, ys)
                 yieldColors = []
                 investments
@@ -143,26 +144,7 @@ class Simulation:
             ax[0].legend()#loc='upper left')
             fig.autofmt_xdate()
         plt.show()
-            
-                
-    def simplePlotStocks(self, individual=True):
-        for stock in self.stocks:
-            xs = []
-            ys = []
-            for i in range(stock.n_days_test):
-                xs.append(stock.startDate+datetime.timedelta(days=i))
-                ys.append(stock.getDayPriceClose(i))
-                #plt.scatter(xs, ys)
-                plt.plot(xs, ys, label=stock.name)
-                plt.title("Time Series of " + stock.name + " from " + str(stock.startDate) + " to " + str(stock.endDate))
-                plt.xlabel("Date")
-                plt.ylabel("Closing price")
-                #plt.show()
-            #if individual:
-            #    plt.figure()
-            #else:
-            #    plt.legend()#loc='upper left')
-        
+                    
     '''
     inputs:
     results: output from simulation function
@@ -178,13 +160,16 @@ class Simulation:
     
 
 def tester():
-    stocks = ['BA', 'GOOG']
+    stocks = ['GOOG']
     models = ['LASSO', 'DCA']#, 'RIDGE', 'LINREG']#, 'LASSO', 'RIDGE']
     timeFrame = (datetime.date(2015,6,20), datetime.date(2015,8,20))
     principal = 35000
+    zeroGainTimeFrame = (datetime.date(2013 ,12, 2), datetime.date(2014, 5, 12))
+    #$531.48 -> $517.78
     validations = 10
     train_length = 100
-    test = Simulation(stocks, models, timeFrame, principal, validation_freq=validations, train_length = train_length, debug=True)
+    alphas = [1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0]
+    test = Simulation(stocks, models, zeroGainTimeFrame, principal, validation_freq=validations, train_length = train_length, debug=False, alphas=alphas)
     test.run()
     test.visualize(individualInvest=True)
 
