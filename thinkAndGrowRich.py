@@ -80,11 +80,11 @@ class Simulation:
                         stockPrice = stock.getDayPriceOpen(i)
                         cash, acctStock, moneySpent = self.buyOrSell(py, cash, acctStock, stockPrice, alpha=a)
                         acctValue = cash+principal+acctStock*stockPrice
-                        #print('total acct value at day ' + str(i) + ' = ' + str(acctValue))
                         snapshots.append((stock.closeTestData.index[i], acctValue))
                         investments.append(moneySpent)
                     mod.addPerformance(stock, a, snapshots)
                     mod.addInvestments(stock, a, investments)
+                    mod.addYield(stock, a, 100*(acctValue-self.principal)/self.principal)
                     print("Investing $" + str(self.principal) + " in " + stock.name + " using " + mod.name + ' with alpha=' +str(a)+  ' from ' + str(stock.startDate) + ' to ' + str(stock.endDate) + ' yielded %' + str(100*(acctValue-self.principal)/self.principal))
                 self.accounts[mod.name][stock.name] = (snapshots, investments, a)
                 
@@ -96,24 +96,17 @@ class Simulation:
             #print("buying $" + str(cash*py) + " at " + str(price))
 
             if percent > 1:
-                print("[warning] attempting to spend more cash than you have. Spending all")
+                if self.debug:
+                    print("[warning] attempting to spend more cash than you have. Spending all")
                 percent = 1
             return cash-percent*cash, stock+percent*cash/price, percent*cash
         else:
             #print("selling " + str(stock*py) + " shares at " + str(price))
             if percent < -1:
-                print("[warning] attempting to sell mroe stock than you have. Selling all")
+                if self.debug:
+                    print("[warning] attempting to sell mroe stock than you have. Selling all")
                 percent = -1
             return cash-py*alpha*stock*price, stock-py*alpha*stock, py*alpha*cash
-
-    def invertDict(self):
-        inverted = {}
-        for strat, s in self.accounts.items():
-            for stock, data in s.items():
-                strats = inverted.get(stock, {})
-                strats[strat] = data
-                inverted[stock] = strats
-        return inverted
 
     def performanceByStock(self):
         stockMap = {}
@@ -122,7 +115,37 @@ class Simulation:
             for model in self.models:
                 stockMap[stock.name][model.name] = (model.performance[stock.name], model.investments[stock.name])
         return stockMap
-                
+
+    def alphaPlot(self):
+        numModels = len(self.models)
+        ax = plt.subplot(111)        
+        beginXs = None
+        beginInds = []
+        offset = 0
+        for model in self.models:
+            for stock in model.stockList:
+
+                yieldMap = model.yields[stock]
+                xs = list(yieldMap.keys())
+
+                inds = np.arange(len(yieldMap.keys()))
+                if len(beginInds) == 0:
+                    beginInds = inds
+                    beginXs = xs
+                ys = list(yieldMap.values())
+                xs = [x + offset for x in xs]
+                inds = [x + offset for x in inds]
+                offset+=.1
+                ax.bar(inds, ys, width = .1, align='center', label=model.name+"-"+stock)
+
+
+        plt.title(r"Percent Yield as $\alpha$ Changes")
+        plt.xlabel(r'$\alpha$')
+        plt.ylabel("Percent Yield")
+        plt.xticks(beginInds, beginXs)
+        plt.legend()
+        plt.show()
+
     def plotPerformanceByStock(self):
         stockMap = self.performanceByStock()
         for stock, modelMap in stockMap.items():
@@ -143,7 +166,10 @@ class Simulation:
                 ax[1].plot(xs, ys)
                 yieldColors = ['green' if i >= 0 else 'red' for i in bestInvestment]
                 investments = [abs(x) for x in bestInvestment]
-                investments = [2*100*x/max(investments) for x in investments] #scaling
+                if model == "DCA":
+                    investments = [10 for x in investments]
+                else:
+                    investments = [2*100*x/max(investments) for x in investments] #scaling
                 ax[0].scatter(*zip(*performance), s=investments, c=yieldColors)
                 ax[0].set_title("Performance of investing $" + str(self.principal))# + " in " + stock + " using " + strat)
                 ax[0].set(ylabel="Portfolio value")
@@ -153,16 +179,17 @@ class Simulation:
         plt.show()
 
 def tester():
-    stocks = ['GOOG']
-    models = ['LASSO', 'DCA']#, 'RIDGE', 'LINREG']#, 'LASSO', 'RIDGE']
+    stocks = ['GOOG', 'AAPL']
+    models = ['LASSO', 'DCA']#, 'RIDGE']#, 'RIDGE', 'LINREG']#, 'LASSO', 'RIDGE']
     timeFrame = (datetime.date(2015,6,20), datetime.date(2015,8,20))
     principal = 35000
     zeroGainTimeFrame = (datetime.date(2013 ,12, 2), datetime.date(2014, 5, 12))
     #$531.48 -> $517.78
     validations = 10
     train_length = 100
-    alphas = [1.0, 1.5, 2.0]#, 2.5, 3.0, 3.5, 4.0]
+    alphas = [1.0, 1.5, 2.0]#, 2.5, 3.0, 3.5, 4.00]
     test = Simulation(stocks, models, zeroGainTimeFrame, principal, validation_freq=validations, train_length = train_length, debug=False, alphas=alphas)
     test.run()
-    test.plotPerformanceByStock()
+    #test.plotPerformanceByStock()
+    test.alphaPlot()
 tester()

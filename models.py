@@ -81,15 +81,17 @@ class Model:
         self.investments = {}
         self.performance = {}
         self.stockList = []
+        self.yields = {}
         
     def __str__(self):
         return "Linear Regression Model"
         
     def addStock(self, stock):
         self.stock = stock
-        self.stockList.append(stock)
+        self.stockList.append(stock.name)
         self.performance[stock.name] = {}
         self.investments[stock.name] = {}
+        self.yields[stock.name] = {}
 
     def addPerformance(self, stock, alpha, performance):
         self.performance[stock.name][alpha] = performance
@@ -97,6 +99,8 @@ class Model:
     def addInvestments(self, stock, alpha, investments):
         self.investments[stock.name][alpha] = investments
 
+    def addYield(self, stock, alpha, pyield):
+        self.yields[stock.name][alpha] = pyield
         
     def fit(self, X, y):
         self.mod.fit(X, y)
@@ -228,15 +232,8 @@ class DCA(Model):
     def fit(self, X, y):
         return self #no need to fit
     def getYields(self, validationFreq=0):
-        pYields = []
-        total = 0
-        for i in range(self.stock.n_days_test):
-            if (i%self.interval == 0):
-                pYields.append(1)
-                total += 1
-            else:
-                pYields.append(0)
-        return list(map(lambda a : a/total, pYields))
+        return [1 for i in range(self.stock.n_days_test)]
+
 
 class ARIMAModel(Model):
     def __init__(self, n=1, p=0, q=0, params = {}, param_ranges = {}, debug=False):
