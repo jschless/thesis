@@ -30,8 +30,7 @@ class Simulation:
         self.train_length = train_length
         self.alphas = alphas
         self.debug = debug
-        self.results = StratResults()
-        self.results.stocks = self.stocks
+
     def init_accounts(self):
         accts = {}
         for mod in self.models:
@@ -84,6 +83,8 @@ class Simulation:
                         #print('total acct value at day ' + str(i) + ' = ' + str(acctValue))
                         snapshots.append((stock.closeTestData.index[i], acctValue))
                         investments.append(moneySpent)
+                    mod.addPerformance(stock, a, snapshots)
+                    mod.addInvestments(stock, a, investments)
                     print("Investing $" + str(self.principal) + " in " + stock.name + " using " + mod.name + ' with alpha=' +str(a)+  ' from ' + str(stock.startDate) + ' to ' + str(stock.endDate) + ' yielded %' + str(100*(acctValue-self.principal)/self.principal))
                 self.accounts[mod.name][stock.name] = (snapshots, investments, a)
                 
@@ -114,63 +115,42 @@ class Simulation:
                 inverted[stock] = strats
         return inverted
 
-    def simplePlotInvestments(self, individual=True):
-        stockToStrat = self.invertDict()
-        for stock, s in stockToStrat.items():
-            thisStock = None
-            for stck in self.stocks:
-                if stock == stck.name:
-                    thisStock= stck
-                    break
+    def performanceByStock(self):
+        stockMap = {}
+        for stock in self.stocks:
+            stockMap[stock.name] = {}
+            for model in self.models:
+                stockMap[stock.name][model.name] = (model.performance[stock.name], model.investments[stock.name])
+        return stockMap
+                
+    def plotPerformanceByStock(self):
+        stockMap = self.performanceByStock()
+        for stock, modelMap in stockMap.items():
+            thisStock = next((x for x in self.stocks if x.name== stock), None)
             xs = thisStock.closeTestData.index.tolist()
             ys = thisStock.closeTestData['Close']
             fig, ax = plt.subplots(2, 1, sharex=True)
-            for strat, data in s.items():
-                timeseries, investments, alpha = data
-                ax[0].plot(*zip(*timeseries), label=stock+"-"+strat+"-alpha="+str(alpha))
+            for model, alphaMaps in modelMap.items():
+                bestPerformance = (None, 0)
+                bestInvestment = None
+                for alpha, performance in alphaMaps[0].items():
+                    investments = alphaMaps[1][alpha]
+                    if performance[-1][1] > bestPerformance[1]:
+                        bestPerformance = (performance, performance[-1][1])
+                        bestInvestment = investments
+                
+                ax[0].plot(*zip(*bestPerformance[0]), label=stock+"-"+model+"-alpha="+str(alpha))
                 ax[1].plot(xs, ys)
-                yieldColors = []
-                investments
-                for i in investments:
-                    if i >= 0:
-                        yieldColors.append('green')
-                    else:
-                        yieldColors.append('red')
-                investments = [abs(x) for x in investments]
-                investments = [2*100*x/max(investments) for x in investments]
-                ax[0].scatter(*zip(*timeseries), s=investments, c=yieldColors)
+                yieldColors = ['green' if i >= 0 else 'red' for i in bestInvestment]
+                investments = [abs(x) for x in bestInvestment]
+                investments = [2*100*x/max(investments) for x in investments] #scaling
+                ax[0].scatter(*zip(*performance), s=investments, c=yieldColors)
                 ax[0].set_title("Performance of investing $" + str(self.principal))# + " in " + stock + " using " + strat)
                 ax[0].set(ylabel="Portfolio value")
                 ax[1].set(xlabel= "Time", ylabel="Stock price")
             ax[0].legend()#loc='upper left')
             fig.autofmt_xdate()
         plt.show()
-                    
-    '''
-    inputs:
-    results: output from simulation function
-    
-    options:
-    individualStocks: plot stock performance individually
-    individualInvest: plot investment performance individually
-    '''
-    def visualize(self, individualStocks=False, individualInvest=False):
-        self.simplePlotInvestments(individual=individualInvest)
-
-class StratResults:
-    def __init__(self):
-        self.stocks = []
-        self.performance = {} #stock-> ( alpha -> timeseries of investments)
-        self.investments = {} #stock -> amount invested
-
-    def addStock(self, stock):
-        self.stocks.append(stock)
-
-    def addPerformance(self, stock, performance):
-        self.performance[stock] = performance
-
-    def addInvestments(self, stock, investment):
-        self.investments[stock] = investment
 
 def tester():
     stocks = ['GOOG']
@@ -181,9 +161,8 @@ def tester():
     #$531.48 -> $517.78
     validations = 10
     train_length = 100
-    alphas = [1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0]
+    alphas = [1.0, 1.5, 2.0]#, 2.5, 3.0, 3.5, 4.0]
     test = Simulation(stocks, models, zeroGainTimeFrame, principal, validation_freq=validations, train_length = train_length, debug=False, alphas=alphas)
     test.run()
-    test.visualize(individualInvest=True)
-
+    test.plotPerformanceByStock()
 tester()

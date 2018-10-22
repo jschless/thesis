@@ -78,12 +78,26 @@ class Model:
         self.params = params
         self.param_ranges = param_ranges
         self.debug = debug
+        self.investments = {}
+        self.performance = {}
+        self.stockList = []
+        
     def __str__(self):
         return "Linear Regression Model"
         
     def addStock(self, stock):
         self.stock = stock
+        self.stockList.append(stock)
+        self.performance[stock.name] = {}
+        self.investments[stock.name] = {}
 
+    def addPerformance(self, stock, alpha, performance):
+        self.performance[stock.name][alpha] = performance
+
+    def addInvestments(self, stock, alpha, investments):
+        self.investments[stock.name][alpha] = investments
+
+        
     def fit(self, X, y):
         self.mod.fit(X, y)
 
