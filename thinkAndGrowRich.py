@@ -124,10 +124,8 @@ class Simulation:
         offset = 0
         for model in self.models:
             for stock in model.stockList:
-
                 yieldMap = model.yields[stock]
                 xs = list(yieldMap.keys())
-
                 inds = np.arange(len(yieldMap.keys()))
                 if len(beginInds) == 0:
                     beginInds = inds
@@ -137,8 +135,6 @@ class Simulation:
                 inds = [x + offset for x in inds]
                 offset+=.1
                 ax.bar(inds, ys, width = .1, align='center', label=model.name+"-"+stock)
-
-
         plt.title(r"Percent Yield as $\alpha$ Changes")
         plt.xlabel(r'$\alpha$')
         plt.ylabel("Percent Yield")
@@ -146,6 +142,32 @@ class Simulation:
         plt.legend()
         plt.show()
 
+    def plotInvestmentAmounts(self):
+        stockMap = self.performanceByStock()
+        for stock, modelMap in stockMap.items():
+            thisStock = next((x for x in self.stocks if x.name== stock), None)
+            xs = thisStock.closeTestData.index.tolist()
+            ys = thisStock.closeTestData['Close']
+            fig, ax = plt.subplots(2, 1, sharex=True)
+            for model, alphaMaps in modelMap.items():
+                bestPerformance = (None, 0)
+                bestInvestment = None
+                for alpha, performance in alphaMaps[0].items():
+                    investments = alphaMaps[1][alpha]
+                    if performance[-1][1] > bestPerformance[1]:
+                        bestPerformance = (performance, performance[-1][1])
+                        bestInvestment = investments
+                
+                ax[0].plot(xs, bestInvestment, label=stock+"-"+model+"-alpha="+str(alpha))
+                ax[1].plot(xs, ys)
+
+                ax[0].set_title("Day-to-day investments")#invest $" + str(self.principal))# + " in " + stock + " using " + strat)
+                ax[0].set(ylabel="Investment Amount")
+                ax[1].set(xlabel= "Time", ylabel="Stock price")
+            ax[0].legend()#loc='upper left')
+            fig.autofmt_xdate()
+        plt.show()
+        
     def plotPerformanceByStock(self):
         stockMap = self.performanceByStock()
         for stock, modelMap in stockMap.items():
@@ -180,16 +202,32 @@ class Simulation:
 
 def tester():
     stocks = ['GOOG', 'AAPL']
-    models = ['LASSO', 'DCA']#, 'RIDGE']#, 'RIDGE', 'LINREG']#, 'LASSO', 'RIDGE']
+    models = ['LASSO', 'LINREG', 'RIDGE', 'DCA']
     timeFrame = (datetime.date(2015,6,20), datetime.date(2015,8,20))
-    principal = 35000
+    principal = 35000 #amount of money starting the investment with
     zeroGainTimeFrame = (datetime.date(2013 ,12, 2), datetime.date(2014, 5, 12))
     #$531.48 -> $517.78
-    validations = 10
+    validations = 10 #validate hyperparameters every n_days
     train_length = 100
-    alphas = [1.0, 1.5, 2.0]#, 2.5, 3.0, 3.5, 4.00]
+    alphas = np.linspace(1,4,6)
     test = Simulation(stocks, models, zeroGainTimeFrame, principal, validation_freq=validations, train_length = train_length, debug=False, alphas=alphas)
     test.run()
-    #test.plotPerformanceByStock()
+    test.plotPerformanceByStock()
     test.alphaPlot()
-tester()
+
+def marketCrash():
+    stocks = ['GOOG']
+    models = ['RIDGE', 'DCA']
+    negativeTimeFrame = (datetime.date(2007,11,1), datetime.date(2008,11,1))
+    #GOOG: $344.26 -> $145.53
+    principal = 35000 #amount of money starting the investment with
+    validations = 10 #validate hyperparameters every n_days
+    train_length = 100
+    alphas = [1.0]#np.linspace(1,4,3)
+    test = Simulation(stocks, models, negativeTimeFrame, principal, validation_freq=validations, train_length = train_length, debug=False, alphas=alphas)
+    test.run()
+    test.plotInvestmentAmounts()
+    test.plotPerformanceByStock()
+    test.alphaPlot()
+    
+marketCrash()

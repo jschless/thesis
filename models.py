@@ -100,8 +100,11 @@ class Model:
         self.investments[stock.name][alpha] = investments
 
     def addYield(self, stock, alpha, pyield):
+        if self.name == 'LINREG':
+            pyield = pyield[0]
         self.yields[stock.name][alpha] = pyield
-        
+
+            
     def fit(self, X, y):
         self.mod.fit(X, y)
 
@@ -203,6 +206,7 @@ class LassoModel(Model):
         self.a = params['alpha']
         self.mod = Lasso(self.a)
         self.name = 'LASSO'
+
     def initMod(self, data, params):
         self.lag_n = params['lag']
         self.lag = TimeLag(self.lag_n)
@@ -221,7 +225,10 @@ class RidgeModel(Model):
         self.name = 'RIDGE'
     def __str__(self):
         return "Ridge Regression Model"
+    def addYield(self, stock, alpha, pyield):
+        self.yields[stock.name][alpha] = pyield[0]
 
+    
 class DCA(Model):
     def __init__(self, interval=5, debug=False):
         super(DCA, self).__init__(debug=debug)
