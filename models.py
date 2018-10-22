@@ -181,12 +181,10 @@ class Model:
 
 class LassoModel(Model):
     def __init__(self, params = {'alpha': 1.0, 'lag':5}, param_ranges = {'alpha': np.logspace(-2,1,num=4), 'lag':range(2,10,4)}, debug=False):
+        super(LassoModel, self).__init__(params=params, param_ranges=param_ranges, debug=debug)
         self.a = params['alpha']
         self.mod = Lasso(self.a)
         self.name = 'LASSO'
-        self.params = params
-        self.param_ranges = param_ranges
-        self.debug = debug
     def initMod(self, data, params):
         self.lag_n = params['lag']
         self.lag = TimeLag(self.lag_n)
@@ -199,17 +197,16 @@ class LassoModel(Model):
 
 class RidgeModel(Model):
     def __init__(self, params = {'alpha': 1.0, 'lag':5}, param_ranges = {'alpha': np.logspace(-2,1,num=4), 'lag':range(2,10,2)}, debug=False):
+        super(RidgeModel, self).__init__(params=params, param_ranges=param_ranges, debug=debug)
         self.a = params['alpha']
         self.mod = Ridge(self.a)
-        self.params = params
-        self.param_ranges = param_ranges
         self.name = 'RIDGE'
-        self.debug = debug
     def __str__(self):
         return "Ridge Regression Model"
 
 class DCA(Model):
     def __init__(self, interval=5, debug=False):
+        super(DCA, self).__init__(debug=debug)
         self.name = 'DCA'
         self.interval = interval
     def __str__(self):
@@ -229,13 +226,11 @@ class DCA(Model):
 
 class ARIMAModel(Model):
     def __init__(self, n=1, p=0, q=0, params = {}, param_ranges = {}, debug=False):
+        super(ARIMAModel, self).__init__(params=params, param_ranges=param_ranges, debug=debug)
         self.n=n
         self.p=p
         self.q=q
         self.name='ARIMA'
-        self.params = params
-        self.param_ranges = param_ranges
-        self.debug = debug
     def __str__(self):
         return "ARIMA"
 
@@ -255,15 +250,13 @@ class ARIMAModel(Model):
 
 class MLP(Model):
     def __init__(self, params = {'hidden layers': (10,), 'alpha':.0001, 'lag': 5}, param_ranges = {'alpha': np.logspace(-5,1, num=4), 'lag' : range(2,10,3)}, debug=False):
+        super(MLP, self).__init__(params=params, param_ranges=param_ranges, debug=debug)
         self.a = params['alpha']
         self.hidden_layer = params['hidden layers']
         self.lag = TimeLag(params['lag'])
         self.mod = MLPRegressor(hidden_layer_sizes = self.hidden_layer, alpha=self.a)
         self.name = 'MLP'
-        self.params = params
-        self.param_ranges = param_ranges
-        self.debug = debug
-
+        
     def __str__(self):
         return "Multi-Layer Perceptron Model"
 

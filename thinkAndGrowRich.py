@@ -30,7 +30,8 @@ class Simulation:
         self.train_length = train_length
         self.alphas = alphas
         self.debug = debug
-#        self.results = Results()
+        self.results = StratResults()
+        self.results.stocks = self.stocks
     def init_accounts(self):
         accts = {}
         for mod in self.models:
@@ -156,8 +157,20 @@ class Simulation:
     def visualize(self, individualStocks=False, individualInvest=False):
         self.simplePlotInvestments(individual=individualInvest)
 
-#class Results():
-    
+class StratResults:
+    def __init__(self):
+        self.stocks = []
+        self.performance = {} #stock-> ( alpha -> timeseries of investments)
+        self.investments = {} #stock -> amount invested
+
+    def addStock(self, stock):
+        self.stocks.append(stock)
+
+    def addPerformance(self, stock, performance):
+        self.performance[stock] = performance
+
+    def addInvestments(self, stock, investment):
+        self.investments[stock] = investment
 
 def tester():
     stocks = ['GOOG']
