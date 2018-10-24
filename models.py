@@ -82,6 +82,10 @@ class Model:
         self.performance = {}
         self.stockList = []
         self.yields = {}
+        self.predictedYs = []
+        self.actualYs = []
+        self.pYields = []
+
         
     def __str__(self):
         return "Linear Regression Model"
@@ -188,16 +192,25 @@ class Model:
         pYields = []
         #self.validate(self.stock.testData.index[0]) #validate off of the first day
         validationDays = self.numValidations(validationFreq)
+        predictedYs = []
+        actualYs = []
         for i in range(len(self.stock.closeTestData)):
             day = self.stock.closeTestData.index[i]
             if i in validationDays:
                 self.validate(day, kfold=True)
             else:
                 self.validate(day, kfold=False)
+            #print("Lagged data for day " + str(day) + " : " + str(self.laggedData[day:day]))
             predictY = self.mod.predict(self.laggedData[day:day])
             actualY = self.stock.closeTestData.iloc[i]['Close']
+            #print("Open price at day: " + str(actualY))
             pYield = (predictY-actualY)/actualY
             pYields.append(pYield[0])
+            predictedYs.append(predictY[0][0])
+            actualYs.append(actualY)
+        self.predictedYs = predictedYs
+        self.actualYs = actualYs
+        self.pYields = pYields
         return pYields
 
 class LassoModel(Model):
