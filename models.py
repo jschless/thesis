@@ -85,7 +85,7 @@ class Model:
         self.predictedYs = []
         self.actualYs = []
         self.pYields = []
-
+        self.cashStock = {}
         
     def __str__(self):
         return "Linear Regression Model"
@@ -96,10 +96,14 @@ class Model:
         self.performance[stock.name] = {}
         self.investments[stock.name] = {}
         self.yields[stock.name] = {}
+        self.cashStock[stock.name] = {}
 
     def addPerformance(self, stock, alpha, performance):
         self.performance[stock.name][alpha] = performance
 
+    def addCashStock(self, stock, alpha, cashStock):
+        self.cashStock[stock.name][alpha] = cashStock
+        
     def addInvestments(self, stock, alpha, investments):
         self.investments[stock.name][alpha] = investments
 
@@ -121,7 +125,6 @@ class Model:
         self.lag_n = params['lag']
         self.lag = TimeLag(self.lag_n)
         self.laggedData = self.lag.transform(data)
-       
     '''
     inputs:
     day : what day are we looking at
@@ -131,19 +134,22 @@ class Model:
     '''
     def validate(self, day, n_splits = 2, kfold = True):        
         kf = KFold(n_splits=2)
+        dayBefore = day-datetime.timedelta(days=1)
         combinations = self.generateCombinations(self.param_ranges)
         bestParams = []
         bestScore = -100
         X = self.stock.closeData[:day]
+        if self.debug:
+            print("input for model " + str(X.tail()))
         if not kfold:
             self.initMod(X, self.params)
-            self.fit(self.laggedData, X.iloc[self.lag_n:])
+            self.fit(self.laggedData[:dayBefore], X[:dayBefore].iloc[self.lag_n:])
             return
         for combo in combinations:
             total = 0
             self.initMod(X, combo)
             y = self.stock.closeData[:day].iloc[self.lag_n:]
-            for train_index, test_index in kf.split(self.laggedData):                
+            for train_index, test_index in kf.split(self.laggedData[:dayBefore]):                
                 X_train, X_test = self.laggedData.iloc[train_index], self.laggedData.iloc[test_index]
                 y_train, y_test = y.iloc[train_index], y.iloc[test_index]
                 self.fit(X_train, y_train)
@@ -156,7 +162,7 @@ class Model:
         if self.debug:
             print("model validated, chosing params: " + str(bestParams))
         self.initMod(X, bestParams)
-        self.fit(self.laggedData, X.iloc[self.lag_n:])
+        self.fit(self.laggedData[:dayBefore], X[:dayBefore].iloc[self.lag_n:])
 
     '''
     performs validations every freq days
@@ -196,14 +202,17 @@ class Model:
         actualYs = []
         for i in range(len(self.stock.closeTestData)):
             day = self.stock.closeTestData.index[i]
+            if self.debug:
+                print("training model for day " + str(day))
             if i in validationDays:
                 self.validate(day, kfold=True)
             else:
                 self.validate(day, kfold=False)
-            #print("Lagged data for day " + str(day) + " : " + str(self.laggedData[day:day]))
+
+            if self.debug:
+                print("Lagged data for day " + str(day) + " : " + str(self.laggedData[day:day]))
             predictY = self.mod.predict(self.laggedData[day:day])
             actualY = self.stock.closeTestData.iloc[i]['Close']
-            #print("Open price at day: " + str(actualY))
             pYield = (predictY-actualY)/actualY
             pYields.append(pYield[0])
             predictedYs.append(predictY[0][0])

@@ -73,28 +73,33 @@ class Simulation:
                     acctValue = principal
                     snapshots = []
                     investments = []
+                    cashStock = []
                     for i in range(n_days):
                         cash += dailyCap
                         principal -= dailyCap
                         py = pYields[i]
                         stockPrice = stock.getDayPriceOpen(i)
-                        cash, acctStock, moneySpent = self.buyOrSell(py, cash, acctStock, stockPrice, alpha=a)
-                        acctValue = cash+principal+acctStock*stockPrice
+                        stockPriceClose = stock.getDayPriceClose(i)
+                        cash, acctStock, moneySpent = self.buyOrSell(py, cash, acctStock, stockPrice, alpha=a)                        
+                        acctValue = cash+principal+acctStock*stockPriceClose
                         snapshots.append((stock.closeTestData.index[i], acctValue))
+                        cashStock.append((cash, acctStock*stockPriceClose))
+                        if self.debug:
+                            print("[debug] percent yield: %f\n[debug] spent %f on %s at stock price %f\n[debug] account value is now %f" %(py, moneySpent, str(stock.closeTestData.index[i]), stockPriceClose, acctValue))
+                            print("[debug] principal: %f     dailyCap:  %f    cash available:  %f   stock owned: %f" % (principal, dailyCap, cash, acctStock))
+                        
                         investments.append(moneySpent)
                     mod.addPerformance(stock, a, snapshots)
                     mod.addInvestments(stock, a, investments)
                     mod.addYield(stock, a, 100*(acctValue-self.principal)/self.principal)
-                    print("Investing $" + str(self.principal) + " in " + stock.name + " using " + mod.name + ' with alpha=' +str(a)+  ' from ' + str(stock.startDate) + ' to ' + str(stock.endDate) + ' yielded %' + str(100*(acctValue-self.principal)/self.principal))
-                self.accounts[mod.name][stock.name] = (snapshots, investments, a)
-                
+                    mod.addCashStock(stock, a, cashStock)
+                    print("[info] Investing $" + str(self.principal) + " in " + stock.name + " using " + mod.name + ' with alpha=' +str(a)+  ' from ' + str(stock.startDate) + ' to ' + str(stock.endDate) + ' yielded %' + str(100*(acctValue-self.principal)/self.principal))                
                 
     def buyOrSell(self, py, cash, stock, price, alpha=1, beta=1):
         #print("percent yield: " + str(py))
         percent = py*alpha
         if py > 0:
             #print("buying $" + str(cash*py) + " at " + str(price))
-
             if percent > 1:
                 if self.debug:
                     print("[warning] attempting to spend more cash than you have. Spending all")
@@ -106,14 +111,16 @@ class Simulation:
                 if self.debug:
                     print("[warning] attempting to sell mroe stock than you have. Selling all")
                 percent = -1
-            return cash-py*alpha*stock*price, stock-py*alpha*stock, py*alpha*cash
+            stockValue = py*alpha*stock*price
+            numShares = stockValue/price
+            return cash-stockValue, stock+numShares, stockValue
 
     def performanceByStock(self):
         stockMap = {}
         for stock in self.stocks:
             stockMap[stock.name] = {}
             for model in self.models:
-                stockMap[stock.name][model.name] = (model.performance[stock.name], model.investments[stock.name])
+                stockMap[stock.name][model.name] = (model.performance[stock.name], model.investments[stock.name], model.cashStock[stock.name])
         return stockMap
 
     def alphaPlot(self):
@@ -149,6 +156,20 @@ class Simulation:
             axis.plot(xs, model.predictedYs, label = model.name)
         axis.set(title = "Predicted Stock Performance", xlabel = 'Day', ylabel='Price')
 
+    def plotCashStock(self, stock, axis):
+        stockMap = self.performanceByStock()       
+        thisStock = next((x for x in self.stocks if x.name== stock), None)
+        xs = thisStock.closeTestData.index.tolist()
+        modelMap = stockMap[stock]
+        for model, alphaMaps in modelMap.items():
+            for alpha, performance in alphaMaps[0].items():
+                cashStock = alphaMaps[2][alpha]
+                cash = [x[0] for x in cashStock]
+                stocks = [x[1] for x in cashStock]
+                axis.plot(xs, cash, label="cash-"+model+"alpha="+str(alpha))
+                axis.plot(xs, stocks, label=stock+"-"+model+"alpha="+str(alpha))
+        axis.set(xlabel= "Time", ylabel="Dollar Amount", title = "Cash v. Stock")
+        
     def plotStockPerformance(self, stock, axis):
         stockMap = self.performanceByStock()
         thisStock = next((x for x in self.stocks if x.name== stock), None)
@@ -187,7 +208,8 @@ class Simulation:
             self.plotPortfolioAmount(stock.name, ax[0])
             self.plotInvestmentAmount(stock.name, ax[1])
             self.plotStockPerformance(stock.name, ax[2])
-            self.plotPredictedStockPerformance(stock.name, ax[3])
+            #self.plotPredictedStockPerformance(stock.name, ax[3])
+            self.plotCashStock(stock.name, ax[3])
             fig.autofmt_xdate()
             for j in range(4):
                 ax[j].legend()
@@ -210,16 +232,30 @@ def tester():
     #test.alphaPlot()
     test.plotInvestmentAmounts()
 def marketCrash():
-    stocks = ['GOOG', 'AAPL']
-    models = ['RIDGE']
+    stocks = ['GOOG']
+    models = ['RIDGE', 'DCA']
     negativeTimeFrame = (datetime.date(2007,11,1), datetime.date(2008,11,1))
     #GOOG: $344.26 -> $145.53
     principal = 35000 #amount of money starting the investment with
     validations = 10 #validate hyperparameters every n_days
     train_length = 100
-    alphas = [1,2]#np.linspace(1,4,2)
+    alphas = [1]#,2]#np.linspace(1,4,2)
     test = Simulation(stocks, models, negativeTimeFrame, principal, validation_freq=validations, train_length = train_length, debug=False, alphas=alphas)
     test.run()
     test.plotGenerator()
+
+def debug():
+    stocks = ['GOOG']
+    models = ['RIDGE']
+    negativeTimeFrame = (datetime.date(2007,11,1), datetime.date(2007,12,1))
+    #GOOG: $344.26 -> $145.53
+    principal = 35000 #amount of money starting the investment with
+    validations = 10 #validate hyperparameters every n_days
+    train_length = 100
+    alphas = [1]#,2]#np.linspace(1,4,2)
+    test = Simulation(stocks, models, negativeTimeFrame, principal, validation_freq=validations, train_length = train_length, debug=True, alphas=alphas)
+    test.run()
+    test.plotGenerator()
+
+
 marketCrash()
-#tester()
