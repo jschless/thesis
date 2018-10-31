@@ -72,7 +72,7 @@ class Stock:
 
 
 class Model:
-    def __init__(self, params={'lag':5}, param_ranges={'lag':range(2,20,2)}, debug=False):
+    def __init__(self, stock, params={'lag':5}, param_ranges={'lag':range(2,20,2)}, debug=False):
         self.mod = LinearRegression()   
         self.name = 'LINREG'
         self.params = params
@@ -80,7 +80,7 @@ class Model:
         self.debug = debug
         self.investments = {}
         self.performance = {}
-        self.stockList = []
+        self.stock=stock
         self.yields = {}
         self.predictedYs = []
         self.actualYs = []
@@ -90,28 +90,17 @@ class Model:
     def __str__(self):
         return "Linear Regression Model"
         
-    def addStock(self, stock):
-        self.stock = stock
-        self.stockList.append(stock.name)
-        self.performance[stock.name] = {}
-        self.investments[stock.name] = {}
-        self.yields[stock.name] = {}
-        self.cashStock[stock.name] = {}
+    def addPerformance(self, alpha, performance):
+        self.performance[alpha] = performance
 
-    def addPerformance(self, stock, alpha, performance):
-        self.performance[stock.name][alpha] = performance
-
-    def addCashStock(self, stock, alpha, cashStock):
-        self.cashStock[stock.name][alpha] = cashStock
+    def addCashStock(self, alpha, cashStock):
+        self.cashStock[alpha] = cashStock
         
-    def addInvestments(self, stock, alpha, investments):
-        self.investments[stock.name][alpha] = investments
+    def addInvestments(self, alpha, investments):
+        self.investments[alpha] = investments
 
-    def addYield(self, stock, alpha, pyield):
-        if self.name == 'LINREG':
-            pyield = pyield[0]
-        self.yields[stock.name][alpha] = pyield
-
+    def addYield(self, alpha, pyield):
+        self.yields[alpha] = pyield
             
     def fit(self, X, y):
         self.mod.fit(X, y)
@@ -119,7 +108,6 @@ class Model:
     def score(self, X, y):
         return self.mod.score(X,y)
         
-
     def initMod(self, data, params):
         self.params = params
         self.lag_n = params['lag']
@@ -196,20 +184,15 @@ class Model:
     '''
     def getYields(self, validationFreq=0):
         pYields = []
-        #self.validate(self.stock.testData.index[0]) #validate off of the first day
         validationDays = self.numValidations(validationFreq)
         predictedYs = []
         actualYs = []
         for i in range(len(self.stock.closeTestData)):
             day = self.stock.closeTestData.index[i]
+
+            self.validate(day, kfold= (i in validationDays))
             if self.debug:
                 print("training model for day " + str(day))
-            if i in validationDays:
-                self.validate(day, kfold=True)
-            else:
-                self.validate(day, kfold=False)
-
-            if self.debug:
                 print("Lagged data for day " + str(day) + " : " + str(self.laggedData[day:day]))
             predictY = self.mod.predict(self.laggedData[day:day])
             actualY = self.stock.closeTestData.iloc[i]['Close']
@@ -226,8 +209,8 @@ class Model:
         return pYields
 
 class LassoModel(Model):
-    def __init__(self, params = {'alpha': 1.0, 'lag':5}, param_ranges = {'alpha': np.logspace(-2,1,num=4), 'lag':range(2,10,4)}, debug=False):
-        super(LassoModel, self).__init__(params=params, param_ranges=param_ranges, debug=debug)
+    def __init__(self, stock, params = {'alpha': 1.0, 'lag':5}, param_ranges = {'alpha': np.logspace(-2,1,num=4), 'lag':range(2,10,4)}, debug=False):
+        super(LassoModel, self).__init__(stock, params=params, param_ranges=param_ranges, debug=debug)
         self.a = params['alpha']
         self.mod = Lasso(self.a)
         self.name = 'LASSO'
@@ -243,20 +226,17 @@ class LassoModel(Model):
         return "Lasso Regression Model"
 
 class RidgeModel(Model):
-    def __init__(self, params = {'alpha': 1.0, 'lag':5}, param_ranges = {'alpha': np.logspace(-2,1,num=4), 'lag':range(2,10,2)}, debug=False):
-        super(RidgeModel, self).__init__(params=params, param_ranges=param_ranges, debug=debug)
+    def __init__(self, stock, params = {'alpha': 1.0, 'lag':5}, param_ranges = {'alpha': np.logspace(-2,1,num=4), 'lag':range(2,10,2)}, debug=False):
+        super(RidgeModel, self).__init__(stock, params=params, param_ranges=param_ranges, debug=debug)
         self.a = params['alpha']
         self.mod = Ridge(self.a)
         self.name = 'RIDGE'
     def __str__(self):
         return "Ridge Regression Model"
-    def addYield(self, stock, alpha, pyield):
-        self.yields[stock.name][alpha] = pyield[0]
-
     
 class DCA(Model):
-    def __init__(self, interval=5, debug=False):
-        super(DCA, self).__init__(debug=debug)
+    def __init__(self,stock, interval=5, debug=False):
+        super(DCA, self).__init__(stock, debug=debug)
         self.name = 'DCA'
         self.interval = interval
     def __str__(self):
@@ -264,12 +244,11 @@ class DCA(Model):
     def fit(self, X, y):
         return self #no need to fit
     def getYields(self, validationFreq=0):
-        return [1 for i in range(self.stock.n_days_test)]
-
+        return [1 if i%self.interval == 0 else 0 for i in range(self.stock.n_days_test)]
 
 class ARIMAModel(Model):
-    def __init__(self, n=1, p=0, q=0, params = {}, param_ranges = {}, debug=False):
-        super(ARIMAModel, self).__init__(params=params, param_ranges=param_ranges, debug=debug)
+    def __init__(self, stock, n=1, p=0, q=0, params = {}, param_ranges = {}, debug=False):
+        super(ARIMAModel, self).__init__(stock, params=params, param_ranges=param_ranges, debug=debug)
         self.n=n
         self.p=p
         self.q=q
@@ -292,8 +271,8 @@ class ARIMAModel(Model):
         return pYields
 
 class MLP(Model):
-    def __init__(self, params = {'hidden layers': (10,), 'alpha':.0001, 'lag': 5}, param_ranges = {'alpha': np.logspace(-5,1, num=4), 'lag' : range(2,10,3)}, debug=False):
-        super(MLP, self).__init__(params=params, param_ranges=param_ranges, debug=debug)
+    def __init__(self, stock, params = {'hidden layers': (10,), 'alpha':.0001, 'lag': 5}, param_ranges = {'alpha': np.logspace(-5,1, num=4), 'lag' : range(2,10,3)}, debug=False):
+        super(MLP, self).__init__(stock, params=params, param_ranges=param_ranges, debug=debug)
         self.a = params['alpha']
         self.hidden_layer = params['hidden layers']
         self.lag = TimeLag(params['lag'])
