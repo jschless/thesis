@@ -18,6 +18,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.linear_model import Lasso
 from sklearn.linear_model import Ridge
 from models import *
+from matplotlib import collections as mc
 
 class Simulation:
     def __init__(self, stock, models, timeFrame, principal, alphas=[1], validation_freq=0, train_length=-1, debug=False):
@@ -30,6 +31,7 @@ class Simulation:
         self.alphas = alphas
         self.debug = debug
         self.name = self.generate_name()
+        self.markers = itertools.cycle(('.', 'v', '1', '3', '<', 's', '*', '^',  '3', '4', 'p', '+', 'd'))
 
     def generate_name(self):
         name = self.stock.name + '-'
@@ -108,6 +110,11 @@ class Simulation:
             numShares = stockValue/price
             return cash-stockValue, stock+numShares, stockValue  
 
+
+
+# --------------------------------------------------------------------------------------- #
+# ------------------------------------- PLOTTING SECTION -------------------------------- #
+# --------------------------------------------------------------------------------------- #
     def alphaPlot(self):
         numModels = len(self.models)
         ax = plt.subplot(111)        
@@ -137,7 +144,7 @@ class Simulation:
     def plotPredictedStockPerformance(self, stock, axis):
         for model in self.models:
             if not model.name == 'DCA':
-                axis.plot(self.getDays(), model.predictedYs, label = 'Predicted Performance-' + model.name)
+                axis.plot(self.getDays(), model.predictedYs, label = 'Predicted Performance-' + model.name, marker = next(self.markers))
         axis.legend()
 
     def plotCashStock(self, stock, axis):
@@ -150,21 +157,32 @@ class Simulation:
         axis.legend()
         
     def plotStockPerformance(self, stock, axis):
-        axis.plot(self.getDays(), self.stock.closeTestData['Close'], label='Actual Performance')
+        axis.plot(self.getDays(), self.stock.closeTestData['Close'], label='Actual Performance', marker = next(self.markers))
         axis.legend()
-        
+
+    def plotActualToPredicted(self, stock, axis):
+        days = self.getDays()
+        for model in self.models:
+            if not model.name == 'DCA':
+                data = []
+                for i in range(len(days)-1):
+                    axis.plot([days[i], days[i+1]], [self.stock.closeTestData.iloc[i]['Close'], model.predictedYs[i+1]], 'r--')
+                    data.append((days[i], days[i+1]))
+                    data.append((self.stock.closeTestData.iloc[i]['Close'], model.predictedYs[i+1]))
+                #axis.plot(*data, 'r--')
+
     def plotInvestmentAmount(self, stock, axis): 
         dca = False
         for model in self.models:
             for alpha, investments in model.investments.items():
                 if model.name == 'DCA':
                     if not dca:
-                        axis.scatter(self.getDays(), investments, s=10, label=model.name)
+                        axis.scatter(self.getDays(), investments, s=10, label=model.name, marker = next(self.markers))
                         dca = True
                 else:
                     zeroLine = [0 for x in self.getDays()]
                     axis.plot(self.getDays(), zeroLine, '--')
-                    axis.scatter(self.getDays(), investments, s=10, label=model.name+"-alpha-"+str(alpha))
+                    axis.scatter(self.getDays(), investments, s=10, label=model.name+"-alpha-"+str(alpha), marker = next(self.markers))
         axis.legend()
 
     def plotPortfolioAmount(self, stock, axis): 
@@ -173,10 +191,10 @@ class Simulation:
             for alpha, performance in model.performance.items():
                 if model.name=='DCA':
                     if not dca: 
-                        axis.plot(self.getDays(), performance, label=model.name)
+                        axis.plot(self.getDays(), performance, label=model.name, marker = next(self.markers))
                         dca = True
                 else:
-                    axis.plot(self.getDays(), performance, label=model.name+"-alpha-"+str(alpha))
+                    axis.plot(self.getDays(), performance, label=model.name+"-alpha-"+str(alpha), marker = next(self.markers))
         axis.legend()
 
     def plotStuff(self):
@@ -184,6 +202,7 @@ class Simulation:
         fig, ax = plt.subplots(3,1,figsize=(16,10), sharex=True)
         self.plotPredictedStockPerformance(stock.name,ax[2])
         self.plotStockPerformance(stock.name, ax[2])
+        self.plotActualToPredicted(stock.name, ax[2])
         self.plotPortfolioAmount(stock.name, ax[0])
         self.plotInvestmentAmount(stock.name, ax[1])
         ax[2].set(xlabel= "Time", ylabel="Stock Price ($)", title='Predicted v. Actual Stock Performance')

@@ -75,13 +75,13 @@ def alphaTester():
 
 def simpleTest():
     stock = 'GOOG'
-    models = ['RIDGE', 'DCA']
+    models = ['LASSO', 'DCA']
     negativeTimeFrame = (datetime.date(2007,11,1), datetime.date(2008,11,1))
     #GOOG: $344.26 -> $145.53
     principal = 35000 #amount of money starting the investment with
     validations = 10 #validate hyperparameters every n_days
     train_length = 100
-    alphas = [1]
+    alphas = [10]
     zeroGainTimeFrame = (datetime.date(2013 ,12, 2), datetime.date(2014, 5, 12))
     test = Simulation(stock, models, zeroGainTimeFrame, principal, validation_freq=validations, train_length = train_length, debug=False, alphas=alphas)
     test.run()

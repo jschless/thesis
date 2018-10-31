@@ -122,7 +122,8 @@ class Model:
     '''
     def validate(self, day, n_splits = 2, kfold = True):        
         kf = KFold(n_splits=2)
-        dayBefore = day-datetime.timedelta(days=1)
+        dayBefore= day-datetime.timedelta(days=1)
+
         combinations = self.generateCombinations(self.param_ranges)
         bestParams = []
         bestScore = -100
@@ -175,7 +176,6 @@ class Model:
             for i in range(len(keys)):
                 temp[keys[i]] = combo[i]
             comboDicts.append(temp)
-        #print('potential param options: ' + str(comboDicts))
         return comboDicts
 
     '''
@@ -189,14 +189,14 @@ class Model:
         actualYs = []
         for i in range(len(self.stock.closeTestData)):
             day = self.stock.closeTestData.index[i]
-
             self.validate(day, kfold= (i in validationDays))
             if self.debug:
                 print("training model for day " + str(day))
                 print("Lagged data for day " + str(day) + " : " + str(self.laggedData[day:day]))
             predictY = self.mod.predict(self.laggedData[day:day])
+            oldY = self.stock.openTestData.iloc[i]['Open']
             actualY = self.stock.closeTestData.iloc[i]['Close']
-            pYield = (predictY-actualY)/actualY
+            pYield = (predictY-oldY)/oldY
             pYields.append(pYield[0])
             if self.name=='LASSO':
                 predictedYs.append(predictY[0])
