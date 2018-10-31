@@ -141,13 +141,13 @@ class Simulation:
     def getDays(self):
         return self.stock.closeTestData.index.tolist()
         
-    def plotPredictedStockPerformance(self, stock, axis):
+    def plotPredictedStockPerformance(self, axis):
         for model in self.models:
             if not model.name == 'DCA':
                 axis.plot(self.getDays(), model.predictedYs, label = 'Predicted Performance-' + model.name, marker = next(self.markers))
         axis.legend()
 
-    def plotCashStock(self, stock, axis):
+    def plotCashStock(self, axis):
         for model in self.models:
             for alpha, cashStock in model.cashStock.items():
                 cash = [x[0] for x in cashStock]
@@ -156,22 +156,18 @@ class Simulation:
                 axis.plot(xs, stocks, label="stock-"+model.name+"alpha="+str(alpha))
         axis.legend()
         
-    def plotStockPerformance(self, stock, axis):
+    def plotStockPerformance(self, axis):
         axis.plot(self.getDays(), self.stock.closeTestData['Close'], label='Actual Performance', marker = next(self.markers))
         axis.legend()
 
-    def plotActualToPredicted(self, stock, axis):
+    def plotActualToPredicted(self, axis):
         days = self.getDays()
         for model in self.models:
             if not model.name == 'DCA':
-                data = []
                 for i in range(len(days)-1):
                     axis.plot([days[i], days[i+1]], [self.stock.closeTestData.iloc[i]['Close'], model.predictedYs[i+1]], 'r--')
-                    data.append((days[i], days[i+1]))
-                    data.append((self.stock.closeTestData.iloc[i]['Close'], model.predictedYs[i+1]))
-                #axis.plot(*data, 'r--')
 
-    def plotInvestmentAmount(self, stock, axis): 
+    def plotInvestmentAmount(self, axis): 
         dca = False
         for model in self.models:
             for alpha, investments in model.investments.items():
@@ -185,7 +181,7 @@ class Simulation:
                     axis.scatter(self.getDays(), investments, s=10, label=model.name+"-alpha-"+str(alpha), marker = next(self.markers))
         axis.legend()
 
-    def plotPortfolioAmount(self, stock, axis): 
+    def plotPortfolioAmount(self, axis): 
         dca = False
         for model in self.models:
             for alpha, performance in model.performance.items():
@@ -200,11 +196,11 @@ class Simulation:
     def plotStuff(self):
         stock = self.stock
         fig, ax = plt.subplots(3,1,figsize=(16,10), sharex=True)
-        self.plotPredictedStockPerformance(stock.name,ax[2])
-        self.plotStockPerformance(stock.name, ax[2])
-        self.plotActualToPredicted(stock.name, ax[2])
-        self.plotPortfolioAmount(stock.name, ax[0])
-        self.plotInvestmentAmount(stock.name, ax[1])
+        self.plotPredictedStockPerformance(ax[2])
+        self.plotStockPerformance(ax[2])
+        self.plotActualToPredicted(ax[2])
+        self.plotPortfolioAmount(ax[0])
+        self.plotInvestmentAmount(ax[1])
         ax[2].set(xlabel= "Time", ylabel="Stock Price ($)", title='Predicted v. Actual Stock Performance')
         ax[1].set(ylabel= "Value ($)", title='Investment and Liquidation Amounts')
         ax[0].set(ylabel= "Value ($)", title='Portfolio Performance')
