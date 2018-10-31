@@ -215,7 +215,10 @@ class Model:
             actualY = self.stock.closeTestData.iloc[i]['Close']
             pYield = (predictY-actualY)/actualY
             pYields.append(pYield[0])
-            predictedYs.append(predictY[0][0])
+            if self.name=='LASSO':
+                predictedYs.append(predictY[0])
+            else:
+                predictedYs.append(predictY[0][0])
             actualYs.append(actualY)
         self.predictedYs = predictedYs
         self.actualYs = actualYs
