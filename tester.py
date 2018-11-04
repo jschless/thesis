@@ -86,7 +86,19 @@ def simpleTest():
     test = Simulation(stock, models, zeroGainTimeFrame, principal, validation_freq=validations, train_length = train_length, debug=False, alphas=alphas)
     test.run()
     test.plotStuff()
-simpleTest()
+#simpleTest()
 
-    
-#alphaTester()
+
+def classificationTest():
+    stock = 'GOOG'
+    models = ['RIDGECLASS', 'RIDGE', 'DCA']
+    testTimeFrame = (datetime.date(2007,11,1), datetime.date(2007,12,1))
+    principal = 35000 #amount of money starting the investment with
+    validations = 10 #validate hyperparameters every n_days
+    train_length = 100
+    alphas = [1]
+    test = Simulation(stock, models, testTimeFrame, principal, validation_freq=validations, train_length = train_length, debug=False, alphas=alphas)
+    test.run()
+    test.plotStuff()
+classificationTest()
+    #alphaTester()

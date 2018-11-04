@@ -17,6 +17,7 @@ from sklearn.model_selection import KFold
 from sklearn.linear_model import LinearRegression
 from sklearn.linear_model import Lasso
 from sklearn.linear_model import Ridge
+from sklearn.linear_model import RidgeClassifier
 from models import *
 
 
@@ -28,13 +29,14 @@ class TimeLag:
         return self
 
     def transform(self, X):
+        X = X.to_frame()
         temp = X
         for i in range(1,self.n+1):
             temp2 = temp.shift(i).rename(columns={'Close': 'Close' + str(i)})
             X = pd.merge(X, temp2, on='Date')
         X = X[X.columns.drop('Close')]
         return X.iloc[self.n:]
-
+    
 class Stock:
     def __init__(self, name, timePeriod, train_length = -1, debug=False):
         self.name = name
@@ -45,7 +47,7 @@ class Stock:
         self.startDate = timePeriod[0]
         self.endDate = timePeriod[1]
         self.n_days_test = len(self.closeTestData) 
-        self.debug = debug
+        self.debug = debug      
 
     def __str__(self):
         return self.name + " from " + str(self.startDate) + " to " + str(self.endDate)
@@ -60,6 +62,8 @@ class Stock:
         startTrain = 0
         if self.train_length > 0:
             series = series[self.timePeriod[0]-datetime.timedelta(days=self.train_length):self.timePeriod[1]]
+            classSeries = [1 if series[cat][i] > series[cat][i-1] else 0 for i in range(len(series))]
+        series['Classification'] = classSeries
         test_series = series.loc[self.timePeriod[0]:]
         train_series = series[:self.timePeriod[0]]
         return  series, train_series, test_series
@@ -86,7 +90,8 @@ class Model:
         self.actualYs = []
         self.pYields = []
         self.cashStock = {}
-        
+        self.classification = False
+         
     def __str__(self):
         return "Linear Regression Model"
         
@@ -127,7 +132,7 @@ class Model:
         combinations = self.generateCombinations(self.param_ranges)
         bestParams = []
         bestScore = -100
-        X = self.stock.closeData[:day]
+        X = self.stock.closeData['Close'][:day]
         if self.debug:
             print("input for model " + str(X.tail()))
         if not kfold:
@@ -198,7 +203,7 @@ class Model:
             actualY = self.stock.closeTestData.iloc[i]['Close']
             pYield = (predictY-oldY)/oldY
             pYields.append(pYield[0])
-            if self.name=='LASSO':
+            if self.name=='LASSO' or self.name=='RIDGE':
                 predictedYs.append(predictY[0])
             else:
                 predictedYs.append(predictY[0][0])
@@ -207,7 +212,7 @@ class Model:
         self.actualYs = actualYs
         self.pYields = pYields
         return pYields
-
+    
 class LassoModel(Model):
     def __init__(self, stock, params = {'alpha': 1.0, 'lag':5}, param_ranges = {'alpha': np.logspace(-2,1,num=4), 'lag':range(2,10,4)}, debug=False):
         super(LassoModel, self).__init__(stock, params=params, param_ranges=param_ranges, debug=debug)
@@ -284,3 +289,78 @@ class MLP(Model):
 
     def fit(self, X, y):
         self.mod.fit(X, np.ravel(y))
+
+class RidgeClass(Model):
+    def __init__(self, stock, params = {'alpha': 1, 'lag':2}, param_ranges = {'alpha': np.logspace(-5,1, num=4), 'lag' : range(2,10,3)}, debug=False):
+        super(RidgeClass, self).__init__(stock, params=params, param_ranges=param_ranges, debug=debug)
+        self.a = params['alpha']
+        self.lag = TimeLag(params['lag'])
+        self.mod = RidgeClassifier(alpha=self.a)
+        self.name = 'RidgeClass'
+        self.classification = True
+
+    def __str__(self):
+        return "Ridge Classifier"
+
+    def validate(self, day, n_splits = 2, kfold = True):        
+        kf = KFold(n_splits=2)
+        dayBefore= day-datetime.timedelta(days=1)
+        combinations = self.generateCombinations(self.param_ranges)
+        bestParams = []
+        bestScore = -100
+        X = self.stock.closeData['Close'][:day]
+        if self.debug:
+            print("input for model " + str(X.tail()))
+        if not kfold:
+            self.initMod(X, self.params)
+            self.fit(self.laggedData[:dayBefore], self.stock.closeData['Classification'][:dayBefore].iloc[self.lag_n:])
+            return
+        for combo in combinations:
+            total = 0
+            self.initMod(X, combo)
+            y = self.stock.closeData['Classification'][:day].iloc[self.lag_n:]
+            for train_index, test_index in kf.split(self.laggedData[:dayBefore]):                
+                X_train, X_test = self.laggedData.iloc[train_index], self.laggedData.iloc[test_index]
+                y_train, y_test = y.iloc[train_index], y.iloc[test_index]
+                self.fit(X_train, y_train)
+                total += self.score(X_test, y_test)
+            if self.debug:
+                print("total score: " + str(total) + "   for params: " + str(combo) + "   avg score: " + str(total/n_splits))
+            if total/n_splits > bestScore:
+                bestScore = total/n_splits
+                bestParams = combo
+        if self.debug:
+            print("model validated, chosing params: " + str(bestParams))
+        self.initMod(X, bestParams)
+        self.fit(self.laggedData[:dayBefore], self.stock.closeData['Classification'][:dayBefore].iloc[self.lag_n:])
+
+    def getYields(self, validationFreq=0):
+        pYields = []
+        validationDays = self.numValidations(validationFreq)
+        predictedYs = []
+        actualYs = []
+        for i in range(len(self.stock.closeTestData)):
+            day = self.stock.closeTestData.index[i]
+            self.validate(day, kfold= (i in validationDays))
+            if self.debug:
+                print("training model for day " + str(day))
+                print("Lagged data for day " + str(day) + " : " + str(self.laggedData[day:day]))
+            upOrDown = self.mod.predict(self.laggedData[day:day])
+            oldY = self.stock.openTestData.iloc[i]['Open']
+            actualY = self.stock.closeTestData.iloc[i]['Close']
+            conf = self.mod.decision_function(self.laggedData[day:day])
+            if upOrDown == 1:
+                predictY = actualY + 5
+                pYield = 1
+            else:
+                predictY = actualY - 5
+                pYield = -1
+            pYield = conf
+            pYields.append(conf[0])
+            predictedYs.append(predictY)
+            actualYs.append(actualY)
+        self.predictedYs = predictedYs
+        self.actualYs = actualYs
+        self.pYields = pYields
+        return pYields
+    

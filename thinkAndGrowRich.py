@@ -56,6 +56,8 @@ class Simulation:
                 temp.append(MLP(self.stock,debug=ver))
             elif mod == 'ARIMA':
                 temp.append(ARIMAModel(self.stock,debug=ver))
+            elif mod == 'RIDGECLASS':
+                temp.append(RidgeClass(self.stock, debug=ver))
         return temp
 
     def run(self):
@@ -156,8 +158,8 @@ class Simulation:
                 axis.plot(xs, stocks, label="stock-"+model.name+"alpha="+str(alpha))
         axis.legend()
         
-    def plotStockPerformance(self, axis):
-        axis.plot(self.getDays(), self.stock.closeTestData['Close'], label='Actual Performance', marker = next(self.markers))
+    def plotStockPerformance(self,  axis, cat='Close'):
+        axis.plot(self.getDays(), self.stock.closeTestData[cat], label='Actual Performance', marker = next(self.markers))
         axis.legend()
 
     def plotActualToPredicted(self, axis):
