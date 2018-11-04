@@ -133,16 +133,18 @@ class Model:
         bestParams = []
         bestScore = -100
         X = self.stock.closeData['Close'][:day]
+        cat = 'Classification' if self.classification else 'Close'
         if self.debug:
             print("input for model " + str(X.tail()))
         if not kfold:
             self.initMod(X, self.params)
-            self.fit(self.laggedData[:dayBefore], X[:dayBefore].iloc[self.lag_n:])
+            y = self.stock.closeData[cat][:dayBefore].iloc[self.lag_n:]
+            self.fit(self.laggedData[:dayBefore], y)
             return
         for combo in combinations:
             total = 0
             self.initMod(X, combo)
-            y = self.stock.closeData[:day].iloc[self.lag_n:]
+            y = self.stock.closeData[cat][:dayBefore].iloc[self.lag_n:]
             for train_index, test_index in kf.split(self.laggedData[:dayBefore]):                
                 X_train, X_test = self.laggedData.iloc[train_index], self.laggedData.iloc[test_index]
                 y_train, y_test = y.iloc[train_index], y.iloc[test_index]
@@ -156,7 +158,8 @@ class Model:
         if self.debug:
             print("model validated, chosing params: " + str(bestParams))
         self.initMod(X, bestParams)
-        self.fit(self.laggedData[:dayBefore], X[:dayBefore].iloc[self.lag_n:])
+        y = self.stock.closeData[cat][:dayBefore].iloc[self.lag_n:]
+        self.fit(self.laggedData[:dayBefore], y)
 
     '''
     performs validations every freq days
@@ -202,8 +205,12 @@ class Model:
             oldY = self.stock.openTestData.iloc[i]['Open']
             actualY = self.stock.closeTestData.iloc[i]['Close']
             pYield = (predictY-oldY)/oldY
+            if self.classification:
+                conf = self.mod.decision_function(self.laggedData[day:day])
+                pYield = conf
+                predictY = [actualY + 5] if predictY == 1 else [actualY-5]
             pYields.append(pYield[0])
-            if self.name=='LASSO' or self.name=='RIDGE':
+            if self.name=='LASSO' or self.name=='RIDGE' or self.name=='RIDGECLASS':
                 predictedYs.append(predictY[0])
             else:
                 predictedYs.append(predictY[0][0])
@@ -296,71 +303,8 @@ class RidgeClass(Model):
         self.a = params['alpha']
         self.lag = TimeLag(params['lag'])
         self.mod = RidgeClassifier(alpha=self.a)
-        self.name = 'RidgeClass'
+        self.name = 'RIDGECLASS'
         self.classification = True
 
     def __str__(self):
         return "Ridge Classifier"
-
-    def validate(self, day, n_splits = 2, kfold = True):        
-        kf = KFold(n_splits=2)
-        dayBefore= day-datetime.timedelta(days=1)
-        combinations = self.generateCombinations(self.param_ranges)
-        bestParams = []
-        bestScore = -100
-        X = self.stock.closeData['Close'][:day]
-        if self.debug:
-            print("input for model " + str(X.tail()))
-        if not kfold:
-            self.initMod(X, self.params)
-            self.fit(self.laggedData[:dayBefore], self.stock.closeData['Classification'][:dayBefore].iloc[self.lag_n:])
-            return
-        for combo in combinations:
-            total = 0
-            self.initMod(X, combo)
-            y = self.stock.closeData['Classification'][:day].iloc[self.lag_n:]
-            for train_index, test_index in kf.split(self.laggedData[:dayBefore]):                
-                X_train, X_test = self.laggedData.iloc[train_index], self.laggedData.iloc[test_index]
-                y_train, y_test = y.iloc[train_index], y.iloc[test_index]
-                self.fit(X_train, y_train)
-                total += self.score(X_test, y_test)
-            if self.debug:
-                print("total score: " + str(total) + "   for params: " + str(combo) + "   avg score: " + str(total/n_splits))
-            if total/n_splits > bestScore:
-                bestScore = total/n_splits
-                bestParams = combo
-        if self.debug:
-            print("model validated, chosing params: " + str(bestParams))
-        self.initMod(X, bestParams)
-        self.fit(self.laggedData[:dayBefore], self.stock.closeData['Classification'][:dayBefore].iloc[self.lag_n:])
-
-    def getYields(self, validationFreq=0):
-        pYields = []
-        validationDays = self.numValidations(validationFreq)
-        predictedYs = []
-        actualYs = []
-        for i in range(len(self.stock.closeTestData)):
-            day = self.stock.closeTestData.index[i]
-            self.validate(day, kfold= (i in validationDays))
-            if self.debug:
-                print("training model for day " + str(day))
-                print("Lagged data for day " + str(day) + " : " + str(self.laggedData[day:day]))
-            upOrDown = self.mod.predict(self.laggedData[day:day])
-            oldY = self.stock.openTestData.iloc[i]['Open']
-            actualY = self.stock.closeTestData.iloc[i]['Close']
-            conf = self.mod.decision_function(self.laggedData[day:day])
-            if upOrDown == 1:
-                predictY = actualY + 5
-                pYield = 1
-            else:
-                predictY = actualY - 5
-                pYield = -1
-            pYield = conf
-            pYields.append(conf[0])
-            predictedYs.append(predictY)
-            actualYs.append(actualY)
-        self.predictedYs = predictedYs
-        self.actualYs = actualYs
-        self.pYields = pYields
-        return pYields
-    
