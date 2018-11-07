@@ -29,6 +29,7 @@ class TimeLag:
         return self
 
     def transform(self, X):
+        """Takes X dataframe and lags it by self.n days"""
         X = X.to_frame()
         temp = X
         for i in range(1,self.n+1):
@@ -39,6 +40,13 @@ class TimeLag:
     
 class Stock:
     def __init__(self, name, timePeriod, train_length = -1, debug=False):
+        """Initializes a stock object
+        
+        Keyword arguments:
+        name - stock symbol
+        timePeriod - tuple (start, end) of period of interest in datetime
+        train_length - optional argument to limit the length of training
+        """
         self.name = name
         self.timePeriod = timePeriod
         self.train_length = train_length
@@ -52,6 +60,7 @@ class Stock:
         return self.name + " from " + str(self.startDate) + " to " + str(self.endDate)
 
     def getData(self, cats=['Close', 'Open']):
+        """Reads stock data from CSV"""
         path = "C:\\Users\\x92423\Documents\\Thesis Data Grab\\" + str(self.name) + ".csv" 
         series = pd.read_csv(path, parse_dates=[0], index_col=0)
         columnsToDrop = ['Close', 'Open', 'High', 'Low', 'Adj Close', 'Volume']
@@ -77,6 +86,7 @@ class Stock:
 
 class Model:
     def __init__(self, stock, params={'lag':5}, param_ranges={'lag':range(2,20,2)}, debug=False):
+        """Initializes model"
         self.mod = LinearRegression()   
         self.name = 'LINREG'
         self.params = params
@@ -186,10 +196,6 @@ class Model:
             comboDicts.append(temp)
         return comboDicts
 
-    '''
-    inputs:
-    kfolds: number of validations to do
-    '''
     def getYields(self, validationFreq=0):
         pYields = []
         validationDays = self.numValidations(validationFreq)

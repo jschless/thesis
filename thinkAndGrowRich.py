@@ -21,10 +21,22 @@ from models import *
 from matplotlib import collections as mc
 
 class Simulation:
-    def __init__(self, stock, models, timeFrame, principal, alphas=[1], validation_freq=0, train_length=-1, debug=False):
+    def __init__(self, stock, models, timeFrame, principal, alphas=[1],
+                 validation_freq=0, train_length=-1, debug=False):
+   """Creates a simulation object.
+
+   Keyword arguments:
+   stock - symbol of S&P500 stock being explored 
+   models - list of models being used (string codes)
+   timeFrame - tuple of datetimes (start, end)
+   principal - amount of money to begin investing with
+   alphas = list of alphas, determines how bold to be with investing
+   validation_freq - how often to validate hyperparameters
+   train_length - if you want to limit the amount of data you train on.
+   """
         self.timeFrame = timeFrame
         self.stock = Stock(stock, self.timeFrame, train_length = train_length)
-        self.models = self.init_models(models, ver=debug)
+        self.models = self.init_models(models)
         self.principal = principal
         self.validation_freq = validation_freq
         self.train_length = train_length
@@ -34,6 +46,7 @@ class Simulation:
         self.markers = itertools.cycle(('.', 'v', '1', '3', '<', 's', '*', '^',  '3', '4', 'p', '+', 'd'))
 
     def generate_name(self):
+        """Creates a unique name for the simulation ran"""
         name = self.stock.name + '-'
         for mod in self.models:
             name += mod.name + '-'
@@ -41,26 +54,28 @@ class Simulation:
         name += 'alphas--' + str(self.alphas)
         return name
                     
-    def init_models(self, models, ver):
+    def init_models(self, models):
+        """Initializes models"""
         temp = []
         for mod in models:
             if mod == 'LINREG':
-                temp.append(Model(self.stock,debug=ver))
+                temp.append(Model(self.stock,debug=self.debug))
             elif mod == 'DCA':
-                temp.append(DCA(self.stock,debug=ver))
+                temp.append(DCA(self.stock,debug=self.debug))
             elif mod == 'LASSO':
-                temp.append(LassoModel(self.stock,debug=ver))
+                temp.append(LassoModel(self.stock,debug=self.debug))
             elif mod == 'RIDGE':
-                temp.append(RidgeModel(self.stock,debug=ver))
+                temp.append(RidgeModel(self.stock,debug=self.debug))
             elif mod == 'MLP':
-                temp.append(MLP(self.stock,debug=ver))
+                temp.append(MLP(self.stock,debug=self.debug))
             elif mod == 'ARIMA':
-                temp.append(ARIMAModel(self.stock,debug=ver))
+                temp.append(ARIMAModel(self.stock,debug=self.debug))
             elif mod == 'RIDGECLASS':
-                temp.append(RidgeClass(self.stock, debug=ver))
+                temp.append(RidgeClass(self.stock, debug=self.debug))
         return temp
 
     def run(self):
+        """Runs simulation on stock over time period"""
         for mod in self.models:
             for a in self.alphas:
                 pYields = mod.getYields(self.validation_freq) #estimated percent yields
@@ -91,6 +106,16 @@ class Simulation:
                 print("[info] Investing $" + str(self.principal) + " in " + self.stock.name + " using " + mod.name + ' with alpha=' +str(a)+  ' from ' + str(self.stock.startDate) + ' to ' + str(self.stock.endDate) + ' yielded %' + str(100*(acctValue-self.principal)/self.principal))
                 
     def buyOrSell(self, py, cash, stock, price, alpha=1, beta=1):
+        """buys or sells stocks, depending on estimated percent yield
+        
+        Keyword arguments:
+        py - proportion of money to invest
+        cash - amount available to spend
+        stock - amount of stock available (to sell)
+        price - price of stock at the moment
+        alpha - parameter to scale amount of money to spend purchasing
+        beta - parameter to scale amount of stock to sell
+        """
         if py > 0:
             percent = py*alpha
             if self.debug:
