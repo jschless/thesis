@@ -86,7 +86,7 @@ class Stock:
 
 class Model:
     def __init__(self, stock, params={'lag':5}, param_ranges={'lag':range(2,20,2)}, debug=False):
-        """Initializes model"
+        """Initializes model"""
         self.mod = LinearRegression()   
         self.name = 'LINREG'
         self.params = params
@@ -128,13 +128,7 @@ class Model:
         self.lag_n = params['lag']
         self.lag = TimeLag(self.lag_n)
         self.laggedData = self.lag.transform(data)
-    '''
-    inputs:
-    day : what day are we looking at
-    n_splits: k in k-fold
-    output:
-    model fit according to best parameters
-    '''
+
     def validate(self, day, n_splits = 2, kfold = True):        
         kf = KFold(n_splits=2)
         dayBefore= day-datetime.timedelta(days=1)
@@ -171,10 +165,6 @@ class Model:
         y = self.stock.data[cat][:dayBefore].iloc[self.lag_n:]
         self.fit(self.laggedData[:dayBefore], y)
 
-    '''
-    performs validations every freq days
-    
-    '''
     def numValidations(self, freq):
         if freq == 0:
             return [0]
