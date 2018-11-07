@@ -145,7 +145,7 @@ class Simulation:
         
     def plotPredictedStockPerformance(self, axis):
         for model in self.models:
-            if not model.name == 'DCA':
+            if not model.name == 'DCA' and not model.classification:
                 axis.plot(self.getDays(), model.predictedYs, label = 'Predicted Performance-' + model.name, marker = next(self.markers))
         axis.legend()
 
@@ -159,13 +159,13 @@ class Simulation:
         axis.legend()
         
     def plotStockPerformance(self,  axis, cat='Close'):
-        axis.plot(self.getDays(), self.stock.closeTestData[cat], label='Actual Performance', marker = next(self.markers))
+        axis.plot(self.getDays(), self.stock.closeTestData['Close'], label='Actual Performance', marker = next(self.markers))
         axis.legend()
 
-    def plotActualToPredicted(self, axis):
+    def plotActualToPredicted(self, axis, cat='Close'):
         days = self.getDays()
         for model in self.models:
-            if not model.name == 'DCA':
+            if not model.name == 'DCA' and not model.classification:
                 for i in range(len(days)-1):
                     axis.plot([days[i], days[i+1]], [self.stock.closeTestData.iloc[i]['Close'], model.predictedYs[i+1]], 'r--')
 
@@ -199,8 +199,8 @@ class Simulation:
         stock = self.stock
         fig, ax = plt.subplots(3,1,figsize=(16,10), sharex=True)
         self.plotPredictedStockPerformance(ax[2])
-        self.plotStockPerformance(ax[2])
-        self.plotActualToPredicted(ax[2])
+        self.plotStockPerformance(ax[2], cat='Open')
+        self.plotActualToPredicted(ax[2], cat='Open')
         self.plotPortfolioAmount(ax[0])
         self.plotInvestmentAmount(ax[1])
         ax[2].set(xlabel= "Time", ylabel="Stock Price ($)", title='Predicted v. Actual Stock Performance')
