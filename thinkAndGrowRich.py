@@ -81,7 +81,7 @@ class Simulation:
                     investments.append(moneySpent)
                     cashStock.append((cash, acctStock*stockPriceClose))
                     if self.debug:
-                        print("[debug] percent yield: %f\n[debug] spent %f on %s at stock price %f\n[debug] account value is now %f" %(py, moneySpent, str(stock.closeTestData.index[i]), stockPriceClose, acctValue))
+                        print("[debug] percent yield: %f\n[debug] spent %f on %s at stock price %f\n[debug] account value is now %f" %(py, moneySpent, str(stock.testData.index[i]), stockPriceClose, acctValue))
                         print("[debug] principal: %f     dailyCap:  %f    cash available:  %f   stock owned: %f" % (principal, dailyCap, cash, acctStock))                        
                     mod.addPerformance(a, snapshots)
                     mod.addInvestments(a, investments)
@@ -141,7 +141,7 @@ class Simulation:
         plt.show()
         
     def getDays(self):
-        return self.stock.closeTestData.index.tolist()
+        return self.stock.testData.index.tolist()
         
     def plotPredictedStockPerformance(self, axis):
         for model in self.models:
@@ -159,7 +159,7 @@ class Simulation:
         axis.legend()
         
     def plotStockPerformance(self,  axis, cat='Close'):
-        axis.plot(self.getDays(), self.stock.closeTestData['Close'], label='Actual Performance', marker = next(self.markers))
+        axis.plot(self.getDays(), self.stock.testData['Close'], label='Actual Performance', marker = next(self.markers))
         axis.legend()
 
     def plotActualToPredicted(self, axis, cat='Close'):
@@ -167,7 +167,7 @@ class Simulation:
         for model in self.models:
             if not model.name == 'DCA' and not model.classification:
                 for i in range(len(days)-1):
-                    axis.plot([days[i], days[i+1]], [self.stock.closeTestData.iloc[i]['Close'], model.predictedYs[i+1]], 'r--')
+                    axis.plot([days[i], days[i+1]], [self.stock.testData.iloc[i]['Close'], model.predictedYs[i+1]], 'r--')
 
     def plotInvestmentAmount(self, axis): 
         dca = False
