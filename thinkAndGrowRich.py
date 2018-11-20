@@ -23,17 +23,18 @@ from matplotlib import collections as mc
 class Simulation:
     def __init__(self, stock, models, timeFrame, principal, alphas=[1],
                  validation_freq=0, train_length=-1, debug=False):
-   """Creates a simulation object.
+        """Creates a simulation object.
 
-   Keyword arguments:
-   stock - symbol of S&P500 stock being explored 
-   models - list of models being used (string codes)
-   timeFrame - tuple of datetimes (start, end)
-   principal - amount of money to begin investing with
-   alphas = list of alphas, determines how bold to be with investing
-   validation_freq - how often to validate hyperparameters
-   train_length - if you want to limit the amount of data you train on.
-   """
+        Keyword arguments:
+        stock - symbol of S&P500 stock being explored 
+        models - list of models being used (string codes)
+        timeFrame - tuple of datetimes (start, end)
+        principal - amount of money to begin investing with
+        alphas = list of alphas, determines how bold to be with investing
+        validation_freq - how often to validate hyperparameters
+        train_length - if you want to limit the amount of data you train on.
+        """
+        self.debug = debug
         self.timeFrame = timeFrame
         self.stock = Stock(stock, self.timeFrame, train_length = train_length)
         self.models = self.init_models(models)
@@ -41,7 +42,7 @@ class Simulation:
         self.validation_freq = validation_freq
         self.train_length = train_length
         self.alphas = alphas
-        self.debug = debug
+        self.stockYield = self.stock.getYield()
         self.name = self.generate_name()
         self.markers = itertools.cycle(('.', 'v', '1', '3', '<', 's', '*', '^',  '3', '4', 'p', '+', 'd'))
 
@@ -52,6 +53,7 @@ class Simulation:
             name += mod.name + '-'
         name += str(self.timeFrame[0]) + '--' + str(self.timeFrame[1]) + '-'
         name += 'alphas--' + str(self.alphas)
+        name += '-train_length-' + str(self.train_length)
         return name
                     
     def init_models(self, models):
@@ -89,7 +91,7 @@ class Simulation:
                     principal -= dailyCap 
                     stockPrice = self.stock.getDayPriceOpen(i)
                     stockPriceClose = self.stock.getDayPriceClose(i)
-                    cash, acctStock, moneySpent = self.buyOrSell(pYields[i], cash, acctStock, stockPrice, alpha=a)
+                    cash, acctStock, moneySpent = self.buyOrSell(pYields[i], cash, acctStock, stockPrice, alpha=a, beta=a)
                     principal += (dailyCap-moneySpent) #return money not spent to principal
                     acctValue = principal+acctStock*stockPriceClose #compute account value
                     snapshots.append(acctValue)
@@ -98,12 +100,13 @@ class Simulation:
                     if self.debug:
                         print("[debug] percent yield: %f\n[debug] spent %f on %s at stock price %f\n[debug] account value is now %f" %(py, moneySpent, str(stock.testData.index[i]), stockPriceClose, acctValue))
                         print("[debug] principal: %f     dailyCap:  %f    cash available:  %f   stock owned: %f" % (principal, dailyCap, cash, acctStock))                        
-                    mod.addPerformance(a, snapshots)
-                    mod.addInvestments(a, investments)
-                    mod.addYield(a, 100*(acctValue-self.principal)/self.principal)
-                    mod.addCashStock(a, cashStock)
-
+                mod.addPerformance(a, snapshots)
+                mod.addInvestments(a, investments)
+                mod.addYield(a, 100*(acctValue-self.principal)/self.principal)
+                mod.addCashStock(a, cashStock)
                 print("[info] Investing $" + str(self.principal) + " in " + self.stock.name + " using " + mod.name + ' with alpha=' +str(a)+  ' from ' + str(self.stock.startDate) + ' to ' + str(self.stock.endDate) + ' yielded %' + str(100*(acctValue-self.principal)/self.principal))
+                print("[info] Total mean error: " + str(mod.meanError))
+                print("[info] Stock yield over timeframe: " + str(self.stockYield))
                 
     def buyOrSell(self, py, cash, stock, price, alpha=1, beta=1):
         """buys or sells stocks, depending on estimated percent yield
@@ -133,9 +136,10 @@ class Simulation:
                 if self.debug:
                     print("[warning] attempting to sell more stock than you have. Selling all")
                 percent = -1
-            stockValue = percent*stock*price
+            amountYouCanSell = .5 #you can sell at most 50% of your stock
+            stockValue = percent*stock*price*amountYouCanSell
             numShares = stockValue/price
-            return cash-stockValue, stock+numShares, stockValue  
+            return cash-stockValue, stock+numShares, stockValue
 
 
 

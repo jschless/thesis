@@ -20,7 +20,6 @@ from sklearn.linear_model import Ridge
 from sklearn.linear_model import RidgeClassifier
 from models import *
 
-
 class TimeLag:
     def __init__(self, n_days):
         self.n = n_days
@@ -56,6 +55,12 @@ class Stock:
         self.n_days_test = len(self.testData) 
         self.debug = debug      
 
+    def getYield(self):
+        stockStart = self.testData['Open'].iloc[0]
+        stockEnd = self.testData['Close'].iloc[-1]
+        stockYield = (stockEnd-stockStart)/stockStart
+        return stockYield*100
+        
     def __str__(self):
         return self.name + " from " + str(self.startDate) + " to " + str(self.endDate)
 
@@ -71,7 +76,7 @@ class Stock:
         startTrain = 0
         if self.train_length > 0:
             series = series[self.timePeriod[0]-datetime.timedelta(days=self.train_length):self.timePeriod[1]]
-            classSeries = [1 if series[cat][i] > series[cat][i-1] else 0 for i in range(len(series))]
+        classSeries = [1 if series[cat][i] > series[cat][i-1] else 0 for i in range(len(series))]            
         series['Classification'] = classSeries
         test_series = series.loc[self.timePeriod[0]:]
         train_series = series[:self.timePeriod[0]]
@@ -201,19 +206,22 @@ class Model:
             oldY = self.stock.testData.iloc[i]['Open']
             actualY = self.stock.testData.iloc[i]['Close']
             pYield = (predictY-oldY)/oldY
+            
             if self.classification:
                 conf = self.mod.decision_function(self.laggedData[day:day])
                 pYield = conf
                 predictY = [actualY + 5] if predictY == 1 else [actualY-5]
             pYields.append(pYield[0])
-            if self.name=='LASSO' or self.name=='RIDGE' or self.name=='RIDGECLASS':
-                predictedYs.append(predictY[0])
-            else:
-                predictedYs.append(predictY[0][0])
+#            if self.name=='LASSO' or self.name=='RIDGE' or self.name=='RIDGECLASS' or self.name=='MLP':
+            predictedYs.append(predictY[0])
+#            else:
+#                print (self.name)
+#                predictedYs.append(predictY[0][0])
             actualYs.append(actualY)
         self.predictedYs = predictedYs
         self.actualYs = actualYs
         self.pYields = pYields
+        self.meanError = sum(map(lambda x,y: abs(x-y), predictedYs, actualYs))/ len(predictedYs)
         return pYields
     
 class LassoModel(Model):
@@ -252,6 +260,7 @@ class DCA(Model):
     def fit(self, X, y):
         return self #no need to fit
     def getYields(self, validationFreq=0):
+        self.meanError = 0
         return [1 if i%self.interval == 0 else 0 for i in range(self.stock.n_days_test)]
 
 class ARIMAModel(Model):
@@ -279,12 +288,12 @@ class ARIMAModel(Model):
         return pYields
 
 class MLP(Model):
-    def __init__(self, stock, params = {'hidden layers': (10,), 'alpha':.0001, 'lag': 5}, param_ranges = {'alpha': np.logspace(-5,1, num=4), 'lag' : range(2,10,3)}, debug=False):
+    def __init__(self, stock, params = {'hidden layers': (100,), 'alpha':.0001, 'lag': 5}, param_ranges = {'alpha': np.logspace(-5,1, num=4), 'lag' : range(2,10,3), 'hidden layers': [(100,), (1000,), (500,)]}, debug=False):
         super(MLP, self).__init__(stock, params=params, param_ranges=param_ranges, debug=debug)
         self.a = params['alpha']
         self.hidden_layer = params['hidden layers']
         self.lag = TimeLag(params['lag'])
-        self.mod = MLPRegressor(hidden_layer_sizes = self.hidden_layer, alpha=self.a)
+        self.mod = MLPRegressor(hidden_layer_sizes = self.hidden_layer, alpha=self.a, max_iter=500)
         self.name = 'MLP'
         
     def __str__(self):
@@ -292,7 +301,23 @@ class MLP(Model):
 
     def fit(self, X, y):
         self.mod.fit(X, np.ravel(y))
+'''
+class RNN(Model):
+    def __init__(self, stock, params = {'hidden layers': (10,), 'alpha':.0001, 'lag': 5}, param_ranges = {'alpha': np.logspace(-5,1, num=4), 'lag' : range(2,10,3)}, debug=False):
+        super(RNN, self).__init__(stock, params=params, param_ranges=param_ranges, debug=debug)
+        self.a = params['alpha']
+        self.hidden_layer = params['hidden layers']
+        self.lag = TimeLag(params['lag'])
+        self.mod = MLPRegressor(hidden_layer_sizes = self.hidden_layer, alpha=self.a)
+        self.name = 'RNN'
+        
+    def __str__(self):
+        return "Recurrent Neural Network Model"
 
+    def fit(self, X, y):
+        self.mod.fit(X, np.ravel(y))
+'''
+        
 class RidgeClass(Model):
     def __init__(self, stock, params = {'alpha': 1, 'lag':2}, param_ranges = {'alpha': np.logspace(-5,1, num=4), 'lag' : range(2,10,3)}, debug=False):
         super(RidgeClass, self).__init__(stock, params=params, param_ranges=param_ranges, debug=debug)
