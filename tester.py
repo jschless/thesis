@@ -103,16 +103,16 @@ def classificationTest():
     
 def mlpTest():
     stock = 'GOOG'
-    models = ['MLP', 'DCA']
-    testTimeFrame = (datetime.date(2007,11,1), datetime.date(2008,11,1))
-    #testTimeFrame = (datetime.date(2013 ,12, 2), datetime.date(2014, 5, 12))
+    models = ['DCA', 'RIDGE', 'MLP']
+    #testTimeFrame = (datetime.date(2014 ,11, 2), datetime.date(2015, 11, 2))
+    #testTimeFrame = (datetime.date(2007,11,1), datetime.date(2008,11,1))
+    testTimeFrame = (datetime.date(2013 ,12, 2), datetime.date(2014, 5, 12))
     principal = 35000 #amount of money starting the investment with
     validations = 0 #validate hyperparameters every n_days
-    alphas = [15, 23, 30]
+    alphas = [30]#[15, 23, 30]
     train_length = 500
     test = Simulation(stock, models, testTimeFrame, principal, validation_freq=validations, debug=False, alphas=alphas, train_length= train_length)
     test.run()
     test.plotStuff()
-
 
 mlpTest()

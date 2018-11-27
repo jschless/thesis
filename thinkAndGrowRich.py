@@ -79,8 +79,8 @@ class Simulation:
     def run(self):
         """Runs simulation on stock over time period"""
         for mod in self.models:
+            pYields = mod.getYields(self.validation_freq) #estimated percent yields
             for a in self.alphas:
-                pYields = mod.getYields(self.validation_freq) #estimated percent yields
                 n_days = self.stock.n_days_test #number of days we're investing
                 dailyCap = self.principal/n_days 
                 principal, acctStock, cash = self.principal, 0, 0
@@ -229,7 +229,7 @@ class Simulation:
         fig, ax = plt.subplots(3,1,figsize=(16,10), sharex=True)
         self.plotPredictedStockPerformance(ax[2])
         self.plotStockPerformance(ax[2], cat='Open')
-        self.plotActualToPredicted(ax[2], cat='Open')
+        #self.plotActualToPredicted(ax[2], cat='Open')
         self.plotPortfolioAmount(ax[0])
         self.plotInvestmentAmount(ax[1])
         ax[2].set(xlabel= "Time", ylabel="Stock Price ($)", title='Predicted v. Actual Stock Performance')
