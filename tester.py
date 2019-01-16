@@ -105,8 +105,8 @@ def mlpTest():
     stock = 'GOOG'
     models = ['DCA', 'RIDGE', 'MLP']
     #testTimeFrame = (datetime.date(2014 ,11, 2), datetime.date(2015, 11, 2))
-    #testTimeFrame = (datetime.date(2007,11,1), datetime.date(2008,11,1))
-    testTimeFrame = (datetime.date(2013 ,12, 2), datetime.date(2014, 5, 12))
+    testTimeFrame = (datetime.date(2007,11,1), datetime.date(2008,11,1))
+    #testTimeFrame = (datetime.date(2013 ,12, 2), datetime.date(2014, 5, 12))
     principal = 35000 #amount of money starting the investment with
     validations = 0 #validate hyperparameters every n_days
     alphas = [30]#[15, 23, 30]

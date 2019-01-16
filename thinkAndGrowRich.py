@@ -45,7 +45,7 @@ class Simulation:
         self.stockYield = self.stock.getYield()
         self.name = self.generate_name()
         self.markers = itertools.cycle(('.', 'v', '1', '3', '<', 's', '*', '^',  '3', '4', 'p', '+', 'd'))
-
+        self.colorMap = {'DCA': 'b', 'MLP': 'g', 'LINREG': 'r', 'RIDGE': 'c', 'LASSO':'m'}
     def generate_name(self):
         """Creates a unique name for the simulation ran"""
         name = self.stock.name + '-'
@@ -146,6 +146,9 @@ class Simulation:
 # --------------------------------------------------------------------------------------- #
 # ------------------------------------- PLOTTING SECTION -------------------------------- #
 # --------------------------------------------------------------------------------------- #
+
+
+
     def alphaPlot(self):
         numModels = len(self.models)
         ax = plt.subplot(111)        
@@ -175,7 +178,7 @@ class Simulation:
     def plotPredictedStockPerformance(self, axis):
         for model in self.models:
             if not model.name == 'DCA' and not model.classification:
-                axis.plot(self.getDays(), model.predictedYs, label = 'Predicted Performance-' + model.name, marker = next(self.markers))
+                axis.plot(self.getDays(), model.predictedYs, label = 'Predicted Performance-' + model.name, marker = next(self.markers), color=self.colorMap[model.name])
         axis.legend()
 
     def plotCashStock(self, axis):
@@ -183,8 +186,8 @@ class Simulation:
             for alpha, cashStock in model.cashStock.items():
                 cash = [x[0] for x in cashStock]
                 stocks = [x[1] for x in cashStock]
-                axis.plot(xs, cash, label="cash-"+model.name+"alpha="+str(alpha))
-                axis.plot(xs, stocks, label="stock-"+model.name+"alpha="+str(alpha))
+                axis.plot(xs, cash, label="cash-"+model.name+"alpha="+str(alpha), color=self.colorMap[model.name])
+                axis.plot(xs, stocks, label="stock-"+model.name+"alpha="+str(alpha), color=self.colorMap[model.name])
         axis.legend()
         
     def plotStockPerformance(self,  axis, cat='Close'):
@@ -204,12 +207,12 @@ class Simulation:
             for alpha, investments in model.investments.items():
                 if model.name == 'DCA':
                     if not dca:
-                        axis.scatter(self.getDays(), investments, s=10, label=model.name, marker = next(self.markers))
+                        axis.scatter(self.getDays(), investments, s=10, label=model.name, marker = next(self.markers), color=self.colorMap[model.name])
                         dca = True
                 else:
                     zeroLine = [0 for x in self.getDays()]
                     axis.plot(self.getDays(), zeroLine, '--')
-                    axis.scatter(self.getDays(), investments, s=10, label=model.name+"-alpha-"+str(alpha), marker = next(self.markers))
+                    axis.scatter(self.getDays(), investments, s=10, label=model.name+"-alpha-"+str(alpha), marker = next(self.markers), color=self.colorMap[model.name])
         axis.legend()
 
     def plotPortfolioAmount(self, axis): 
@@ -218,10 +221,10 @@ class Simulation:
             for alpha, performance in model.performance.items():
                 if model.name=='DCA':
                     if not dca: 
-                        axis.plot(self.getDays(), performance, label=model.name, marker = next(self.markers))
+                        axis.plot(self.getDays(), performance, label=model.name, marker = next(self.markers), color=self.colorMap[model.name])
                         dca = True
                 else:
-                    axis.plot(self.getDays(), performance, label=model.name+"-alpha-"+str(alpha), marker = next(self.markers))
+                    axis.plot(self.getDays(), performance, label=model.name+"-alpha-"+str(alpha), marker = next(self.markers), color=self.colorMap[model.name])
         axis.legend()
 
     def plotStuff(self):
