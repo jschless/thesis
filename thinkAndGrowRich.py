@@ -22,7 +22,7 @@ from matplotlib import collections as mc
 
 class Simulation:
     def __init__(self, stock, models, timeFrame, principal, alphas=[1],
-                 validation_freq=0, train_length=-1, debug=False):
+                 validation_freq=0, train_length=-1, difference=1, debug=False, otherStocks=None):
         """Creates a simulation object.
 
         Keyword arguments:
@@ -36,7 +36,8 @@ class Simulation:
         """
         self.debug = debug
         self.timeFrame = timeFrame
-        self.stock = Stock(stock, self.timeFrame, train_length = train_length)
+        self.difference = difference
+        self.stock = Stock(stock, self.timeFrame, train_length = train_length, difference=difference, otherStocks=otherStocks)
         self.models = self.init_models(models)
         self.principal = principal
         self.validation_freq = validation_freq
@@ -45,7 +46,8 @@ class Simulation:
         self.stockYield = self.stock.getYield()
         self.name = self.generate_name()
         self.markers = itertools.cycle(('.', 'v', '1', '3', '<', 's', '*', '^',  '3', '4', 'p', '+', 'd'))
-        self.colorMap = {'DCA': 'b', 'MLP': 'g', 'LINREG': 'r', 'RIDGE': 'c', 'LASSO':'m'}
+        self.colorMap = {'DCA': 'b', 'MLP': 'g', 'LINREG': 'r', 'RIDGE': 'c', 'LASSO':'m', 'MLPCLASS': 'r'}
+
     def generate_name(self):
         """Creates a unique name for the simulation ran"""
         name = self.stock.name + '-'
@@ -63,17 +65,15 @@ class Simulation:
             if mod == 'LINREG':
                 temp.append(Model(self.stock,debug=self.debug))
             elif mod == 'DCA':
-                temp.append(DCA(self.stock,debug=self.debug))
+                temp.append(DCA(self.stock, debug=self.debug))
             elif mod == 'LASSO':
                 temp.append(LassoModel(self.stock,debug=self.debug))
             elif mod == 'RIDGE':
                 temp.append(RidgeModel(self.stock,debug=self.debug))
             elif mod == 'MLP':
                 temp.append(MLP(self.stock,debug=self.debug))
-            elif mod == 'ARIMA':
-                temp.append(ARIMAModel(self.stock,debug=self.debug))
-            elif mod == 'RIDGECLASS':
-                temp.append(RidgeClass(self.stock, debug=self.debug))
+            elif mod == 'MLPCLASS':
+                temp.append(MLPCLASS(self.stock, debug=self.debug))
         return temp
 
     def run(self):
@@ -97,15 +97,12 @@ class Simulation:
                     snapshots.append(acctValue)
                     investments.append(moneySpent)
                     cashStock.append((cash, acctStock*stockPriceClose))
-                    if self.debug:
-                        print("[debug] percent yield: %f\n[debug] spent %f on %s at stock price %f\n[debug] account value is now %f" %(py, moneySpent, str(stock.testData.index[i]), stockPriceClose, acctValue))
-                        print("[debug] principal: %f     dailyCap:  %f    cash available:  %f   stock owned: %f" % (principal, dailyCap, cash, acctStock))                        
                 mod.addPerformance(a, snapshots)
                 mod.addInvestments(a, investments)
                 mod.addYield(a, 100*(acctValue-self.principal)/self.principal)
                 mod.addCashStock(a, cashStock)
                 print("[info] Investing $" + str(self.principal) + " in " + self.stock.name + " using " + mod.name + ' with alpha=' +str(a)+  ' from ' + str(self.stock.startDate) + ' to ' + str(self.stock.endDate) + ' yielded %' + str(100*(acctValue-self.principal)/self.principal))
-                print("[info] Total mean error: " + str(mod.meanError))
+
                 print("[info] Stock yield over timeframe: " + str(self.stockYield))
                 
     def buyOrSell(self, py, cash, stock, price, alpha=1, beta=1):
@@ -146,7 +143,6 @@ class Simulation:
 # --------------------------------------------------------------------------------------- #
 # ------------------------------------- PLOTTING SECTION -------------------------------- #
 # --------------------------------------------------------------------------------------- #
-
 
 
     def alphaPlot(self):

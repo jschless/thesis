@@ -13,32 +13,15 @@ from matplotlib.colors import ListedColormap
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.neural_network import MLPRegressor
+from sklearn.neural_network import MLPClassifier
 from sklearn.model_selection import KFold
 from sklearn.linear_model import LinearRegression
 from sklearn.linear_model import Lasso
 from sklearn.linear_model import Ridge
 from sklearn.linear_model import RidgeClassifier
-from models import *
-
-class TimeLag:
-    def __init__(self, n_days):
-        self.n = n_days
-
-    def fit(self, X, y=None):
-        return self
-
-    def transform(self, X):
-        """Takes X dataframe and lags it by self.n days"""
-        X = X.to_frame()
-        temp = X
-        for i in range(1,self.n+1):
-            temp2 = temp.shift(i).rename(columns={'Close': 'Close' + str(i)})
-            X = pd.merge(X, temp2, on='Date')
-        X = X[X.columns.drop('Close')]
-        return X.iloc[self.n:]
     
 class Stock:
-    def __init__(self, name, timePeriod, train_length = -1, debug=False):
+    def __init__(self, name, timePeriod, train_length = -1, difference=1, n_timelag=4, otherStocks=None, debug=False):
         """Initializes a stock object
         
         Keyword arguments:
@@ -47,47 +30,93 @@ class Stock:
         train_length - optional argument to limit the length of training
         """
         self.name = name
-        self.timePeriod = timePeriod
+        self.startDate, self.endDate = timePeriod
         self.train_length = train_length
-        self.data, self.trainData, self.testData = self.getData()
-        self.startDate = timePeriod[0]
-        self.endDate = timePeriod[1]
+        self.n_difference = difference
+        self.n_timelag = n_timelag
+        self.otherStocks = otherStocks
+        self.getData(self.otherStocks)
         self.n_days_test = len(self.testData) 
-        self.debug = debug      
+        self.debug = debug
 
+    def __str__(self):
+        return self.name + " from " + str(self.startDate) + " to " + str(self.endDate)
+
+    def resetData(self, n_timelag):
+        self.n_timelag = n_timelag
+        self.getData(self.otherStocks)
+        
     def getYield(self):
         stockStart = self.testData['Open'].iloc[0]
         stockEnd = self.testData['Close'].iloc[-1]
         stockYield = (stockEnd-stockStart)/stockStart
         return stockYield*100
-        
-    def __str__(self):
-        return self.name + " from " + str(self.startDate) + " to " + str(self.endDate)
 
-    def getData(self, cats=['Close', 'Open']):
+    def classify(self, pyield):
+        classes = [-3,-.5,.5,3]
+        for i in range(len(classes)):
+            if pyield < classes[i]:
+                return i
+        return len(classes)
+
+    def declassify(self, classification):
+        mapClass = {0: -3, 1: -.5, 2: 0, 3: .5, 4: 3}
+        return mapClass[classification]
+
+    def timeLag(self, X, cat, n=4):
+        for i in range(1,n+1):
+            X[cat + str(i)] = X[cat].shift(i)
+        X = X.drop(columns=[cat])
+        return X
+    
+    def getData(self, otherStocks, cats=['Close', 'Open', 'Volume', 'High', 'Low']):
         """Reads stock data from CSV"""
-        path = "C:\\Users\\x92423\Documents\\Thesis Data Grab\\" + str(self.name) + ".csv" 
+        path = "C:\\Users\\x92423\Documents\\Thesis Data Grab\\" + str(self.name) + ".csv"
         series = pd.read_csv(path, parse_dates=[0], index_col=0)
-        columnsToDrop = ['Close', 'Open', 'High', 'Low', 'Adj Close', 'Volume']
-        for cat in cats:
-            columnsToDrop.remove(cat)
-        series = series.drop(columns=columnsToDrop).dropna()
-        startTest = 0
-        startTrain = 0
-        if self.train_length > 0:
-            series = series[self.timePeriod[0]-datetime.timedelta(days=self.train_length):self.timePeriod[1]]
-        classSeries = [1 if series[cat][i] > series[cat][i-1] else 0 for i in range(len(series))]            
-        series['Classification'] = classSeries
-        test_series = series.loc[self.timePeriod[0]:]
-        train_series = series[:self.timePeriod[0]]
-        return  series, train_series, test_series
+        series = series[cats].dropna()    
+    
+        ### ADDING OTHER STOCKS ###
+        if otherStocks is not None:
+            for s in otherStocks:
+                path2 = "C:\\Users\\x92423\Documents\\Thesis Data Grab\\" + s + ".csv"
+                temp = pd.read_csv(path2, parse_dates=[0], index_col=0)
+                temp = temp[cats].dropna()
+                for cat in cats:
+                    series[s + ' ' + cat] = temp[cat]
 
+        classSeries = [self.classify(100*(series['Close'][i] - series['Close'][i-1])/series['Close'][i-1]) for i in range(len(series))]
+        series['Classification'] = classSeries
+
+        self.data = series.iloc[self.n_difference+self.n_timelag:]
+        self.testData =  self.data.loc[self.startDate: self.endDate]
+        self.trainData =  self.data[: self.startDate]
+
+        ### DIFFERENCING ###        
+        differencedData =  self.trendDifferencing(series,  self.n_difference).dropna()
+        
+        ### LAGGING VALUES ###
+        for cat in cats:
+            differencedData = self.timeLag(differencedData, cat, self.n_timelag)
+
+        if otherStocks is not None:
+            for s in otherStocks:
+                for cat in cats:
+                    differencedData = self.timeLag(differencedData, s+ ' ' + cat, self.n_timelag)
+    
+        self.differencedData = differencedData[self.n_timelag:].drop(columns=['Classification'])
+        #don't want people to accidentally use classification
+    
+        self.differencedTestData =  self.differencedData.loc[self.startDate:self.endDate]
+        self.differencedTrainData =  self.differencedData[: self.startDate]
+    
     def getDayPriceClose(self, i):
         return self.testData.iloc[i]['Close']
 
     def getDayPriceOpen(self, i):
         return self.testData.iloc[i]['Open']
 
+    def trendDifferencing(self, timeseries, n):
+        return timeseries-timeseries.shift(n)
 
 class Model:
     def __init__(self, stock, params={'lag':5}, param_ranges={'lag':range(2,20,2)}, debug=False):
@@ -105,8 +134,8 @@ class Model:
         self.actualYs = []
         self.pYields = []
         self.cashStock = {}
-        self.classification = False
-         
+        self.cat = 'Classification'
+        
     def __str__(self):
         return "Linear Regression Model"
         
@@ -128,47 +157,42 @@ class Model:
     def score(self, X, y):
         return self.mod.score(X,y)
         
-    def initMod(self, data, params):
+    def initMod(self, params, trainUpTo):
         self.params = params
         self.lag_n = params['lag']
-        self.lag = TimeLag(self.lag_n)
-        self.laggedData = self.lag.transform(data)
-
+        self.stock.resetData(self.lag_n)
+        self.X = self.stock.differencedData[:trainUpTo]
+        self.y = self.stock.data[self.cat][:trainUpTo]
+        
     def validate(self, day, n_splits = 2, kfold = True):        
-        kf = KFold(n_splits=2)
+        kf = KFold(n_splits)
         dayBefore= day-datetime.timedelta(days=1)
 
         combinations = self.generateCombinations(self.param_ranges)
         bestParams = []
         bestScore = -100
-        X = self.stock.data['Close'][:day]
-        cat = 'Classification' if self.classification else 'Close'
-        if self.debug:
-            print("input for model " + str(X.tail()))
+        self.initMod(self.params, dayBefore)
+        self.fit(self.X,self.y)
         if not kfold:
-            self.initMod(X, self.params)
-            y = self.stock.data[cat][:dayBefore].iloc[self.lag_n:]
-            self.fit(self.laggedData[:dayBefore], y)
-            return
+            return #If we aren't cross validating end here
+
         for combo in combinations:
             total = 0
-            self.initMod(X, combo)
-            y = self.stock.data[cat][:dayBefore].iloc[self.lag_n:]
-            for train_index, test_index in kf.split(self.laggedData[:dayBefore]):                
-                X_train, X_test = self.laggedData.iloc[train_index], self.laggedData.iloc[test_index]
-                y_train, y_test = y.iloc[train_index], y.iloc[test_index]
+            self.initMod(combo, dayBefore)
+            for train_index, test_index in kf.split(self.X):
+                X_train, X_test = self.X.iloc[train_index], self.X.iloc[test_index]
+                y_train, y_test = self.y.iloc[train_index], self.y.iloc[test_index]
                 self.fit(X_train, y_train)
                 total += self.score(X_test, y_test)
-            if self.debug:
-                print("total score: " + str(total) + "   for params: " + str(combo) + "   avg score: " + str(total/n_splits))
+
             if total/n_splits > bestScore:
                 bestScore = total/n_splits
                 bestParams = combo
-        if self.debug:
-            print("model validated, chosing params: " + str(bestParams))
-        self.initMod(X, bestParams)
-        y = self.stock.data[cat][:dayBefore].iloc[self.lag_n:]
-        self.fit(self.laggedData[:dayBefore], y)
+        print("[info] model validated, chosing params: " + str(bestParams))
+        self.initMod(bestParams, dayBefore)
+        print('x: ' + str(self.X.head()))
+        print('y: ' + str(self.y.head()))
+        self.fit(self.X, self.y)
 
     def numValidations(self, freq):
         if freq == 0:
@@ -199,56 +223,21 @@ class Model:
         for i in range(len(self.stock.testData)):
             day = self.stock.testData.index[i]
             self.validate(day, kfold= (i in validationDays))
-            if self.debug:
-                print("training model for day " + str(day))
-                print("Lagged data for day " + str(day) + " : " + str(self.laggedData[day:day]))
-            predictY = self.mod.predict(self.laggedData[day:day])
-            oldY = self.stock.testData.iloc[i]['Open']
-            actualY = self.stock.testData.iloc[i]['Close']
-            pYield = (predictY-oldY)/oldY
-            
-            if self.classification:
-                conf = self.mod.decision_function(self.laggedData[day:day])
-                pYield = conf
-                predictY = [actualY + 5] if predictY == 1 else [actualY-5]
-            pYields.append(pYield[0])
-#            if self.name=='LASSO' or self.name=='RIDGE' or self.name=='RIDGECLASS' or self.name=='MLP':
+
+            predictY = self.mod.predict(self.stock.differencedData[day:day])
+            actualY = self.stock.data[self.cat][day:day]
+            print('predicty: ' + str(predictY))
+            pYield = self.stock.declassify(predictY[0])
+
+            pYields.append(pYield)
+
             predictedYs.append(predictY[0])
-#            else:
-#                print (self.name)
-#                predictedYs.append(predictY[0][0])
             actualYs.append(actualY)
         self.predictedYs = predictedYs
         self.actualYs = actualYs
         self.pYields = pYields
-        self.meanError = sum(map(lambda x,y: abs(x-y), predictedYs, actualYs))/ len(predictedYs)
+
         return pYields
-    
-class LassoModel(Model):
-    def __init__(self, stock, params = {'alpha': 1.0, 'lag':5}, param_ranges = {'alpha': np.logspace(-2,1,num=4), 'lag':range(2,10,4)}, debug=False):
-        super(LassoModel, self).__init__(stock, params=params, param_ranges=param_ranges, debug=debug)
-        self.a = params['alpha']
-        self.mod = Lasso(self.a)
-        self.name = 'LASSO'
-
-    def initMod(self, data, params):
-        self.lag_n = params['lag']
-        self.lag = TimeLag(self.lag_n)
-        self.laggedData = self.lag.transform(data)
-        self.a = params['alpha']
-        self.mod = Lasso(self.a)
-        
-    def __str__(self):
-        return "Lasso Regression Model"
-
-class RidgeModel(Model):
-    def __init__(self, stock, params = {'alpha': 1.0, 'lag':5}, param_ranges = {'alpha': np.logspace(-2,1,num=4), 'lag':range(2,10,2)}, debug=False):
-        super(RidgeModel, self).__init__(stock, params=params, param_ranges=param_ranges, debug=debug)
-        self.a = params['alpha']
-        self.mod = Ridge(self.a)
-        self.name = 'RIDGE'
-    def __str__(self):
-        return "Ridge Regression Model"
     
 class DCA(Model):
     def __init__(self,stock, interval=5, debug=False):
@@ -263,69 +252,17 @@ class DCA(Model):
         self.meanError = 0
         return [1 if i%self.interval == 0 else 0 for i in range(self.stock.n_days_test)]
 
-class ARIMAModel(Model):
-    def __init__(self, stock, n=1, p=0, q=0, params = {}, param_ranges = {}, debug=False):
-        super(ARIMAModel, self).__init__(stock, params=params, param_ranges=param_ranges, debug=debug)
-        self.n=n
-        self.p=p
-        self.q=q
-        self.name='ARIMA'
-    def __str__(self):
-        return "ARIMA"
-
-    def getYields(self, validationFreq = 0):
-        history = [x for x in self.stock.trainData]
-        pYields = []
-        for i in range(len(self.stock.testData)):
-            self.mod = ARIMA(history, order=(self.p,self.p,self.q))
-            model_fit = self.mod.fit(disp=-1)
-            output = model_fit.forecast()
-            predictY = output[0]
-            actualY = self.stock.testData.iloc[i]['Close']
-            pYield = (predictY-actualY)/actualY
-            pYields.append(pYield)
-            history.append(actualY)
-        return pYields
-
-class MLP(Model):
+class MLPCLASS(Model):
     def __init__(self, stock, params = {'hidden layers': (100,), 'alpha':.0001, 'lag': 5}, param_ranges = {'alpha': np.logspace(-5,1, num=4), 'lag' : range(2,10,3), 'hidden layers': [(100,), (1000,), (500,)]}, debug=False):
-        super(MLP, self).__init__(stock, params=params, param_ranges=param_ranges, debug=debug)
-        self.a = params['alpha']
-        self.hidden_layer = params['hidden layers']
-        self.lag = TimeLag(params['lag'])
-        self.mod = MLPRegressor(hidden_layer_sizes = self.hidden_layer, alpha=self.a, max_iter=500)
-        self.name = 'MLP'
-        
-    def __str__(self):
-        return "Multi-Layer Perceptron Model"
-
-    def fit(self, X, y):
-        self.mod.fit(X, np.ravel(y))
-'''
-class RNN(Model):
-    def __init__(self, stock, params = {'hidden layers': (10,), 'alpha':.0001, 'lag': 5}, param_ranges = {'alpha': np.logspace(-5,1, num=4), 'lag' : range(2,10,3)}, debug=False):
-        super(RNN, self).__init__(stock, params=params, param_ranges=param_ranges, debug=debug)
-        self.a = params['alpha']
-        self.hidden_layer = params['hidden layers']
-        self.lag = TimeLag(params['lag'])
-        self.mod = MLPRegressor(hidden_layer_sizes = self.hidden_layer, alpha=self.a)
-        self.name = 'RNN'
-        
-    def __str__(self):
-        return "Recurrent Neural Network Model"
-
-    def fit(self, X, y):
-        self.mod.fit(X, np.ravel(y))
-'''
-        
-class RidgeClass(Model):
-    def __init__(self, stock, params = {'alpha': 1, 'lag':2}, param_ranges = {'alpha': np.logspace(-5,1, num=4), 'lag' : range(2,10,3)}, debug=False):
-        super(RidgeClass, self).__init__(stock, params=params, param_ranges=param_ranges, debug=debug)
-        self.a = params['alpha']
-        self.lag = TimeLag(params['lag'])
-        self.mod = RidgeClassifier(alpha=self.a)
-        self.name = 'RIDGECLASS'
+        super(MLPCLASS, self).__init__(stock, params=params, param_ranges=param_ranges, debug=debug)
         self.classification = True
+        self.a = params['alpha']
+        self.hidden_layer = params['hidden layers']
+        self.mod = MLPClassifier(hidden_layer_sizes = self.hidden_layer, alpha=self.a, max_iter=500)
+        self.name = 'MLPCLASS'
 
     def __str__(self):
-        return "Ridge Classifier"
+        return "Multi-Layer Perceptron Classifier"
+
+    def fit(self, X, y):
+        self.mod.fit(X, np.ravel(y))
