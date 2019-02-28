@@ -130,10 +130,13 @@ def classTest():
     stock = 'GOOG'
     models = ['DCA','MLPCLASS']
     testTimeFrame = (datetime.date(2007,11,1), datetime.date(2008,3,1))
+    #testTimeFrame = (datetime.date(2014 ,11, 2), datetime.date(2015, 11, 2))
+    #testTimeFrame = (datetime.date(2013 ,12, 2), datetime.date(2014, 5, 12))
     principal = 35000 #amount of money starting the investment with
     validations = 0 #validate hyperparameters every n_days
-    alphas = [30]#[15, 23, 30]
-    test = Simulation(stock, models, testTimeFrame, principal, validation_freq=validations, debug=False, alphas=alphas)#, secondStock = 'AAPL')
+    alphas = [1]#[15, 23, 30]
+    stocks = ['AAPL', 'IBM', 'GE', 'AMZN']
+    test = Simulation(stock, models, testTimeFrame, principal, validation_freq=validations, debug=False, alphas=alphas, otherStocks = stocks)
     test.run()
     test.plotStuff()
 

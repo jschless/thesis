@@ -54,8 +54,8 @@ class Simulation:
         for mod in self.models:
             name += mod.name + '-'
         name += str(self.timeFrame[0]) + '--' + str(self.timeFrame[1]) + '-'
-        name += 'alphas--' + str(self.alphas)
-        name += '-train_length-' + str(self.train_length)
+#        name += 'alphas--' + str(self.alphas)
+#        name += '-train_length-' + str(self.train_length)
         return name
                     
     def init_models(self, models):
@@ -82,21 +82,33 @@ class Simulation:
             pYields = mod.getYields(self.validation_freq) #estimated percent yields
             for a in self.alphas:
                 n_days = self.stock.n_days_test #number of days we're investing
-                dailyCap = self.principal/n_days 
+                daysRemaining = n_days
                 principal, acctStock, cash = self.principal, 0, 0
                 acctValue = principal
                 snapshots, investments, cashStock = [], [], []
+                dailyCap = self.principal/(daysRemaining)
                 for i in range(n_days):
-                    cash = dailyCap #get dailyCap in cash to spend for the day
-                    principal -= dailyCap 
+
+                    if mod.name == 'DCA':
+                        cash = dailyCap #get dailyCap in cash to spend for the day
+                    else:
+                        cash = dailyCap*5
+                    #principal -= dailyCap 
                     stockPrice = self.stock.getDayPriceOpen(i)
                     stockPriceClose = self.stock.getDayPriceClose(i)
-                    cash, acctStock, moneySpent = self.buyOrSell(pYields[i], cash, acctStock, stockPrice, alpha=a, beta=a)
-                    principal += (dailyCap-moneySpent) #return money not spent to principal
+                    stockCap = acctStock/(daysRemaining+10 )
+                    #acctStock -= stockCap
+                    #cash, acctStock, moneySpent, stockSold = self.buyOrSell(pYields[i], cash, stockCap, stockPrice, alpha=a, beta=a)
+                    stockChange, moneyChange,  = self.buyOrSell(pYields[i], cash, stockCap, stockPrice, alpha=a, beta=a)
+                    principal += moneyChange
+                    acctStock += stockChange
+
                     acctValue = principal+acctStock*stockPriceClose #compute account value
+
                     snapshots.append(acctValue)
-                    investments.append(moneySpent)
+                    investments.append(moneyChange)
                     cashStock.append((cash, acctStock*stockPriceClose))
+                    daysRemaining -= 1
                 mod.addPerformance(a, snapshots)
                 mod.addInvestments(a, investments)
                 mod.addYield(a, 100*(acctValue-self.principal)/self.principal)
@@ -118,25 +130,20 @@ class Simulation:
         """
         if py > 0:
             percent = py*alpha
-            if self.debug:
-                print("[info] buying $" + str(cash*py) + " at " + str(price))
             if percent > 1:
-                if self.debug:
-                    print("[warning] attempting to spend more cash than you have. Spending all")
+                print("[warning] attempting to spend more cash than you have. Spending all")
                 percent = 1
-            return cash-percent*cash, stock+percent*cash/price, percent*cash
+            stockChange = percent*cash/price
+            cashChange = -percent*cash
+            return stockChange, cashChange
         else:
             percent = py*beta
-            if self.debug:
-                print("[info] selling " + str(stock*py) + " shares at " + str(price))
             if percent < -1:
-                if self.debug:
-                    print("[warning] attempting to sell more stock than you have. Selling all")
+                print("[warning] attempting to sell more stock than you have. Selling all")
                 percent = -1
-            amountYouCanSell = .5 #you can sell at most 50% of your stock
-            stockValue = percent*stock*price*amountYouCanSell
-            numShares = stockValue/price
-            return cash-stockValue, stock+numShares, stockValue
+            stockChange = percent*stock
+            cashChange = -percent*stock*price
+            return stockChange, cashChange
 
 
 

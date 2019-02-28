@@ -53,14 +53,14 @@ class Stock:
         return stockYield*100
 
     def classify(self, pyield):
-        classes = [-3,-.5,.5,3]
+        classes = [-.2,-.2]
         for i in range(len(classes)):
             if pyield < classes[i]:
                 return i
         return len(classes)
 
     def declassify(self, classification):
-        mapClass = {0: -3, 1: -.5, 2: 0, 3: .5, 4: 3}
+        mapClass = {0: -.5, 1:0, 2: .3}
         return mapClass[classification]
 
     def timeLag(self, X, cat, n=4):
@@ -164,17 +164,19 @@ class Model:
         self.X = self.stock.differencedData[:trainUpTo]
         self.y = self.stock.data[self.cat][:trainUpTo]
         
-    def validate(self, day, n_splits = 2, kfold = True):        
+    def validate(self, day, n_splits = 2, kfold = True):
+        if not kfold:
+            return #If we aren't cross validating end here
+
+
+        print('validating stock again')
         kf = KFold(n_splits)
         dayBefore= day-datetime.timedelta(days=1)
-
         combinations = self.generateCombinations(self.param_ranges)
         bestParams = []
         bestScore = -100
         self.initMod(self.params, dayBefore)
         self.fit(self.X,self.y)
-        if not kfold:
-            return #If we aren't cross validating end here
 
         for combo in combinations:
             total = 0
@@ -190,8 +192,6 @@ class Model:
                 bestParams = combo
         print("[info] model validated, chosing params: " + str(bestParams))
         self.initMod(bestParams, dayBefore)
-        print('x: ' + str(self.X.head()))
-        print('y: ' + str(self.y.head()))
         self.fit(self.X, self.y)
 
     def numValidations(self, freq):
@@ -220,13 +220,16 @@ class Model:
         validationDays = self.numValidations(validationFreq)
         predictedYs = []
         actualYs = []
+        print('features: ' + str(self.stock.differencedData.columns))
         for i in range(len(self.stock.testData)):
             day = self.stock.testData.index[i]
             self.validate(day, kfold= (i in validationDays))
 
-            predictY = self.mod.predict(self.stock.differencedData[day:day])
+            X = self.stock.differencedData[day:day]
+
+            predictY = self.mod.predict(X)
             actualY = self.stock.data[self.cat][day:day]
-            print('predicty: ' + str(predictY))
+            
             pYield = self.stock.declassify(predictY[0])
 
             pYields.append(pYield)
@@ -240,7 +243,7 @@ class Model:
         return pYields
     
 class DCA(Model):
-    def __init__(self,stock, interval=5, debug=False):
+    def __init__(self,stock, interval=1, debug=False):
         super(DCA, self).__init__(stock, debug=debug)
         self.name = 'DCA'
         self.interval = interval
@@ -253,7 +256,7 @@ class DCA(Model):
         return [1 if i%self.interval == 0 else 0 for i in range(self.stock.n_days_test)]
 
 class MLPCLASS(Model):
-    def __init__(self, stock, params = {'hidden layers': (100,), 'alpha':.0001, 'lag': 5}, param_ranges = {'alpha': np.logspace(-5,1, num=4), 'lag' : range(2,10,3), 'hidden layers': [(100,), (1000,), (500,)]}, debug=False):
+    def __init__(self, stock, params = {'hidden layers': (100,), 'alpha':.0001, 'lag': 5}, param_ranges = {'alpha': [1], 'lag' : range(2,10,3), 'hidden layers': [(100,), (1000,), (500,)]}, debug=False):
         super(MLPCLASS, self).__init__(stock, params=params, param_ranges=param_ranges, debug=debug)
         self.classification = True
         self.a = params['alpha']

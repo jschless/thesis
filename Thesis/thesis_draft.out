@@ -1,0 +1,37 @@
+\BOOKMARK [1][-]{section.1}{Introduction}{}% 1
+\BOOKMARK [1][-]{section.2}{Literature Review}{}% 2
+\BOOKMARK [2][-]{subsection.2.1}{Investment Basics}{section.2}% 3
+\BOOKMARK [3][-]{subsubsection.2.1.1}{Stocks}{subsection.2.1}% 4
+\BOOKMARK [3][-]{subsubsection.2.1.2}{Dollar Cost Averaging}{subsection.2.1}% 5
+\BOOKMARK [2][-]{subsection.2.2}{Time Series Analysis}{section.2}% 6
+\BOOKMARK [3][-]{subsubsection.2.2.1}{Stationary Models}{subsection.2.2}% 7
+\BOOKMARK [3][-]{subsubsection.2.2.2}{Trends, Seasonality, and Noise}{subsection.2.2}% 8
+\BOOKMARK [4][-]{paragraph.2.2.2.1}{Trend and Seasonality Elimination by Differencing}{subsubsection.2.2.2}% 9
+\BOOKMARK [3][-]{subsubsection.2.2.3}{Moving Average}{subsection.2.2}% 10
+\BOOKMARK [3][-]{subsubsection.2.2.4}{Autoregressive Models}{subsection.2.2}% 11
+\BOOKMARK [3][-]{subsubsection.2.2.5}{ARIMA}{subsection.2.2}% 12
+\BOOKMARK [1][-]{section.3}{Data}{}% 13
+\BOOKMARK [2][-]{subsection.3.1}{Features}{section.3}% 14
+\BOOKMARK [2][-]{subsection.3.2}{Time Lag}{section.3}% 15
+\BOOKMARK [2][-]{subsection.3.3}{Differencing}{section.3}% 16
+\BOOKMARK [2][-]{subsection.3.4}{Augmenting with Additional Stocks}{section.3}% 17
+\BOOKMARK [1][-]{section.4}{Methods}{}% 18
+\BOOKMARK [2][-]{subsection.4.1}{Machine Learning}{section.4}% 19
+\BOOKMARK [3][-]{subsubsection.4.1.1}{Regression v. Classification}{subsection.4.1}% 20
+\BOOKMARK [3][-]{subsubsection.4.1.2}{Linear Models}{subsection.4.1}% 21
+\BOOKMARK [3][-]{subsubsection.4.1.3}{Neural Networks}{subsection.4.1}% 22
+\BOOKMARK [3][-]{subsubsection.4.1.4}{Determining Coefficients}{subsection.4.1}% 23
+\BOOKMARK [2][-]{subsection.4.2}{Classification}{section.4}% 24
+\BOOKMARK [3][-]{subsubsection.4.2.1}{Choosing Classes}{subsection.4.2}% 25
+\BOOKMARK [3][-]{subsubsection.4.2.2}{Cross Validation}{subsection.4.2}% 26
+\BOOKMARK [2][-]{subsection.4.3}{The Strategy}{section.4}% 27
+\BOOKMARK [3][-]{subsubsection.4.3.1}{Practical Assumptions}{subsection.4.3}% 28
+\BOOKMARK [3][-]{subsubsection.4.3.2}{Dollar Cost Averaging}{subsection.4.3}% 29
+\BOOKMARK [3][-]{subsubsection.4.3.3}{Yield Estimation Proportionality Investing}{subsection.4.3}% 30
+\BOOKMARK [3][-]{subsubsection.4.3.4}{Short-Sighted Investment Strategies}{subsection.4.3}% 31
+\BOOKMARK [2][-]{subsection.4.4}{The Simulation}{section.4}% 32
+\BOOKMARK [1][-]{section.5}{Results}{}% 33
+\BOOKMARK [2][-]{subsection.5.1}{Regression}{section.5}% 34
+\BOOKMARK [2][-]{subsection.5.2}{Classification}{section.5}% 35
+\BOOKMARK [1][-]{section.6}{Future Work}{}% 36
+\BOOKMARK [1][-]{appendix.A}{Pulling Data}{}% 37
