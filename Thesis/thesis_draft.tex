@@ -12,6 +12,7 @@
 \usepackage{makeidx}
 \usepackage{hyperref}
 \usepackage{comment}
+\usepackage{algorithmicx}
 %\graphicspath{{C:/Users/x92423/Documents/}}
 
 \newcommand{\subsubsubsection}[1]{\paragraph{#1}\mbox{}\\}
@@ -113,20 +114,22 @@ it is obvious that a lower purchase price will increase profit. Figure \ref{dca}
 With its simplicity, independence of market trends, and performance, dollar cost averaging is often used as the standard of comparison for investment strategies.
 
 \subsection{Time Series Analysis}
-Stock data examined over time forms a time series. Explicitly, we have some series $\{X_t\} = \{x_1, x_2, \dots, x_n\}$ where $x_t$ is some vector corresponding to the $t$th day of a stock. We are concerned with forecasting the price of a stock for the next day. Given $\{X_t\}$, can we predict $x_{t+1}$?
+Stock data examined over time forms a time series. Explicitly, we have some series $\{X_t\} = \{x_1, x_2, \dots, x_n\}$ where $x_t$ is a scalar corresponding to the price of a stock on day $t$. $x_t$ can also be a vector, where each day has multiple data points, such as the $t$th day's open price, close price, and volume traded. We are concerned with forecasting the price of a stock for the next day. Given $x_1 \dots x_k$, can we predict $x_{k+1}$?
+
+We will now outline some basic properties of time series that we will reference throughout the paper.
 
 \subsubsection{Stationary Models}  
 A time series is stationary if it has similar statistical properties at $\{X_t\}$ and at $\{X_{t+h}\}$ for some $h$. For a more mathematically rigorous definition of stationary, we need to define some additional functions.
 
 The mean function of $\{X_t\}$ is $\mu_X(t) = E(X_t)$. This refers to the average value of the time series or stock. The first requirement for stationarity is that $\mu_X(t)$ be independent of $t$. In the context of stocks, the time series around day 0 should have the same mean as the time series around day $n$. This rarely happens with financial data, which will be addressed later.
 
-The second requirement has to do with the covariance of the time series. The covariance function of $\{X_t\}$ is defined as
+The second requirement has to do with the covariance of the time series. The covariance function of $\{X_t\}$ is defined as below, where $X_r$ and $X_s$ are subsets of the time series
 $$\gamma _X(r,s) = \text{Cov}(X_r, X_s) = E[(X_r - \mu _X(r))(X_s - \mu_X(s))]$$
 
 Our next requirement for a time series to be stationary is that $\gamma_X(t+h, t)$ is independent of $t$ for each $h$. 
 
 \subsubsection{Trends, Seasonality, and Noise}
-Stock data as a time series is not stationary. This should be obvious. A traditional way to decompose a time series is into a trend component, a seasonal component, and some random noise component. Thus, a time series can be decomposed in the following way
+As a result, stock data as a time series is clearly not stationary, since it exhibits trends. Any time series which is, for example, steadily increasing, will not be stationary since its mean will also increase as you take subsets further into the series. A traditional way to decompose a time series is into a trend component, a seasonal component, and some random noise component. Thus, a time series can be decomposed in the following way
 $$X_t = m_t + s_t + Y_t \ \ \ \ \ \ \text{additive decomposition}$$
 
 where $m_t$ is the trend component, $s_t$ is the seasonal component, and $Y_t$ is some random stationary noise component. In Figure \ref{trends}, these components are on display. The plot titled purely random error is our random noise component; this is a stationary time series. The plots depict two types of trend, linear and nonlinear. A trend refers to some change to the data that occurs over time. As stocks generally increase overtime, there is clearly some trend involved in stock time series. Additionally, time series can have seasonality, seen in the bottom left of the figure. Anything that is cyclic can be represented as seasonality. As an example, if a stock increased at the beginning of the month, peaked in the middle, and then decreased before bottoming out at the end of the month, this would be a seasonality we would have to negate before applying time series analysis. The plot in the bottom right demonstrates an interaction of these additive terms, which is generally what financial data looks like. \cite[22]{timeseries}
@@ -134,7 +137,7 @@ where $m_t$ is the trend component, $s_t$ is the seasonal component, and $Y_t$ i
 \begin{figure}[ht]
 	\centering
 	\includegraphics[width=.75\textwidth]{trend.jpeg}
-	\caption{This figure shows the various components of a time series. \cite{trend}}
+	\caption{Trend and Seasonal components of a time series. \cite{trend}}
 	\label{trends}
 \end{figure}
 
@@ -143,7 +146,7 @@ where $m_t$ is the trend component, $s_t$ is the seasonal component, and $Y_t$ i
 Many time series analysis models require a stationary time series. While we can account for this by attempting to estimate the trend and seasonality of the time series, in this case we will transform the data to eliminate trend and seasonality.
 
 To eliminate trend, you can apply the difference operator $\nabla^d$ which lags the time series data by the past $d$ days.
-$$\nabla^1 X_t = X_t - X_{t-1}=(1-B)X_t$$
+$$\nabla^2 X_t = X_t - X_{t-1}=(1-B)X_t$$
 
 where $B$ is the backward shift operator such that $BX_t = X_{t-1}$.
 
@@ -153,7 +156,7 @@ This applies for some general $\nabla^d$. A similar technique can be used to neg
 
 $$\nabla_d = X_t - X_{t-d} = (1-B^d) X_t$$
 
-A more rigorous explanation can be found in \cite[22-32]{timeseries}.
+A more rigorous explanation can be found in \cite[22-32]{timeseries}. Given a stationary time series, we now briefly outline several classical methods for forecasting, i.e. predicting $x_{k+1}$ from $x_1 \dots x_k.$
 
 \subsubsection{Moving Average}
 Moving average models use the past forecast errors to model the time series and forecast. 
@@ -175,10 +178,33 @@ AutoRegressive Integrated Moving Average (ARIMA) combines moving average and aut
 
 $$ x'_{t} = c + \phi_{1}x'_{t-1} + \cdots + \phi_{p}x'_{t-p} + \theta_{1}\varepsilon_{t-1} + \cdots + \theta_{q}\varepsilon_{t-q} + \varepsilon_{t} $$
 
-$x'_t$ refers to the differenced series. This comes from the "integrated" part of the model; it is differenced. The general ARIMA model is of form ARIMA($p,d,q$) where $p$ is the order of the autoregressive part, $d$ is the degree of differencing, and $q$ is the order of the moving average part. \cite[8.5]{forecasting}
+$x'_t$ refers to the differenced series. This comes from the ``integrated'' part of the model; it is differenced. The general ARIMA model is of form ARIMA($p,d,q$) where $p$ is the order of the autoregressive part, $d$ is the degree of differencing, and $q$ is the order of the moving average part. \cite[8.5]{forecasting}
 
 \section{Data}
-All data for the project comes through the Yahoo! finance API. At the beginning of this research, we pulled all of the available data from each stock in the S\&P 500. The amount of data varies by stock. Older companies like GE have data going back to the late 1950s whereas newer companies like Google go back to the early 2000s. The code for this can be found in Appendix A.
+We obtained all data for the project using the Yahoo! finance API. At the beginning of this research, we pulled all of the available data from each stock in the S\&P 500. The amount of data varies by stock. Older companies like GE have data going back to the late 1950s whereas newer companies like Google go back to the early 2000s. The code for this can be found in Appendix A.
+
+\begin{figure*}[t!]
+	\centering
+	\begin{subfigure}[t]{0.3\textwidth}
+		\centering
+		\includegraphics[width=\linewidth]{googBear.png}
+		\caption{An example of Google stock in a bearish market.}
+	\end{subfigure}%
+	~ 
+	\begin{subfigure}[t]{0.3\textwidth}
+		\centering
+		\includegraphics[width=\linewidth]{googBull.png}
+		\caption{An example of Google stock in a bullish market.}
+	\end{subfigure}
+	~
+	\begin{subfigure}[t]{0.3\textwidth}
+		\centering
+		\includegraphics[width=\linewidth]{googNoisy.png}
+		\caption{An example of Google stock in a noisy-neutral market.}
+	\end{subfigure}
+	
+	\caption{This figure shows Google stock data over the different kinds of explored markets.}
+\end{figure*}
 
 \subsection{Features}
 The available data for analysis is summarized below:
@@ -192,7 +218,7 @@ The available data for analysis is summarized below:
 \end{itemize}
 
 \subsection{Time Lag}
-The input vector was lagged at variable lengths. The number of days to lag was one of the many hyper-parameters in this process. 
+The input vector was lagged at variable lengths. The number of days to lag was one of the many hyper-parameters in this process. Each feature was lagged for the same length.
 
 \subsection{Differencing}
 Stock data has a noticeable trend, and it is difficult to train a model on data with a trend. See Figure \ref{differencing} for a further explanation of the need for differencing.
@@ -226,6 +252,8 @@ We used a time differencing of one, which was sufficient and optimal for station
 \subsection{Augmenting with Additional Stocks}
 One of our intuitions was the correlation of stocks in the same sector or otherwise similar markets might be useful for our stocks. As such, our input vector also contained the lagged data for other stocks, to include closing price, opening price, volume traded, high and low.
 
+With the multiple features for multiple stocks all lagged by the same number of days, the input grew very large. A typical simulation consisted of a few thousand days of training data with around 200 days of test data, and each day could easily have 100 data points, depending on the lag and additional stocks chosen. 
+
 \section{Methods}
 The research framework can be summarized in the following few steps:
 \begin{enumerate}
@@ -236,56 +264,56 @@ The research framework can be summarized in the following few steps:
 \end{enumerate}
 
 \subsection{Machine Learning} 
-Machine learning is a type of spplied statistics that is often associated with mysterious terms like neural networks, artificial intelligence, and deep learning. However, it is important to note that these methods of machine learning are simply statistical models just as more rudimentary methods like linear regression are.
+Machine learning is a type of applied statistics that is often associated with mysterious terms like neural networks, artificial intelligence, and deep learning. However, it is important to note that these methods of machine learning are simply statistical models just as more rudimentary methods like linear regression are.
 
 \subsubsection{Regression v. Classification}
-Machine learning, in the context of prediction, breaks down into two main subsets: regression and classification. The distinction between the two subsets lies in the output type. Both share the same input of some set of data $\{(x_i, y_i)\}$. With regression $y_i \in \mathbb{R}$ whereas with classification, $y_i \in \{0,\dots,N\}$, where $N$ is the number of classifications or categories there are.  \cite[9-10]{springer} When looking at stock time series data, a regression model would seek to forecast what the price of the stock will be the following day, while a classification model might seek to determine whether the stock will go up, down or stay the same. 
+Machine learning, in the context of prediction, breaks down into two main subsets: regression and classification. The distinction between the two subsets lies in the output type. Both share the same input of some set of data $\{(x_i, y_i)\}$. With regression $y_i \in \mathbb{R}$ whereas with classification, $y_i \in S$, where $S$ is the set of labels for the data.  \cite[9-10]{springer} When looking at stock time series data, a regression model would seek to forecast what the price of the stock will be the following day, while a classification model might seek to determine whether the stock will go up, down or stay the same. 
 
 \subsubsection{Linear Models}
 Linear models are one of the simplest approaches to prediction. Given a vector of inputs 
-$X =  (x_1, x_2, \dots, x_n)^T$, a linear model predicts output by assuming the data is well predicted by a linear equation of the form 
+$\textbf{x} =  (x_1, x_2, \dots, x_n)^T$, a linear model predicts output by assuming the data is well predicted by a linear equation of the form 
 
-$$\hat{Y} = \hat{\beta}_0 + \textbf{X}^T \hat{\beta}$$
+$$\hat{Y} = \hat{\beta}_0 + \textbf{x}^T \boldsymbol{\hat{\beta}}$$
 
-where $\hat{\beta_0}$ is the intercept for the data and $\hat{\beta}$ is the vector of coefficients for the input matrix $X$. \cite[11]{springer} %We may represent $\beta$ as vector $\beta = (\beta_0, \dots, \beta_j)$
+where $\hat{\beta_0}$ is the intercept for the data and $\boldsymbol{\hat{\beta}}$ is the vector of coefficients for the input vector $\textbf{x}$. \cite[11]{springer} 
 
 We can estimate the coefficients (or ``weights'') using the method of least squares, which seeks to minimize the residual sum of squared error. 
 
-With least squares, we select $\hat{\beta}$ as the solution to the following optimization problem:
+With least squares, we select $\boldsymbol{\hat{\beta}}$ as the solution to the following optimization problem:
 
-$$\hat{\beta} = \text{arg} \min_\beta \sum_{i=1}^{N} \left(y_i - \beta_0 - \textbf{X}_i^T \hat{\beta} \right)^2$$
+$$\boldsymbol{\hat{\beta}} = \text{arg} \min_\beta \sum_{i=1}^{N} \left(y_i - \beta_0 - \textbf{x}_i^T \boldsymbol{\hat{\beta}} \right)^2$$
 \cite[42]{springer} This is a convex optimization problem and the solution can be written in closed form.
 
 
 \textbf{Ridge Method}
 
-One problem that can occur with least squares regression is poor prediction accuracy because of high variance. \cite[55]{springer} This is also known as over-fitting. A solution is to shrink the size of the regression coefficients by imposing a penalty on their size. This is a simple modification of the least squares coefficient selection where we determine the coefficients according to the following formula: 
-$$\hat{\beta}_{\text{ridge}} = \text{argmin} \sum_{i=1}^{N} (y_i - \beta_0 -\textbf{X}_i^T \hat{\beta})^2 + \gamma \sum_{j=1}^{p}\beta_j^2$$
+One problem that can occur with least squares regression is poor prediction accuracy because of high variance. \cite[55]{springer} This is also known as over-fitting. A solution is to shrink the size of the regression coefficients by imposing a penalty on their size. This is called regularization. We make a simple modification of the least squares coefficient selection where we determine the coefficients according to the following formula: 
+$$\boldsymbol{\hat{\beta}}_{\text{ridge}} = \text{argmin} \sum_{i=1}^{N} (y_i - \beta_0 -\textbf{x}_i^T \boldsymbol{\hat{\beta}})^2 + \gamma \sum_{j=1}^{p} \boldsymbol{\beta_j}^2$$
 \cite[59]{springer}
 
-Notice, the only difference between ridge and least squares is the penalty term for coefficient size, which is controlled by the tuning parameter $\gamma$. A large $\gamma$ will place a large penalty on parameter size. As $\gamma$ increases, the coefficients approach 0. Also, note that the following penalty represents the $L_2$ norm of $\beta$ and it does not include $\beta_0$:
+Notice, the only difference between ridge and least squares is the penalty term for coefficient size, which is controlled by the tuning parameter $\gamma$. A large $\gamma$ will place a large penalty on parameter size. As $\gamma$ increases, the coefficients approach 0. Also, note that the following penalty represents the $L_2$ norm of $\boldsymbol{\beta}$ and it does not include $\beta_0$:
 
-$$ \sum_{j=1}^{p}\beta_j^2$$
+$$ \sum_{j=1}^{p} \boldsymbol{\beta_j}^2$$
 
 \textbf{LASSO Method}
 
 
-The LASSO (least absolute shrinkage and selection operator) method is another variant of least squares that employs a slightly different penalty. Coefficient selection goes according to the following equation:
-$$\hat{\beta}_{\text{lasso}} = \text{argmin} \sum_{i=1}^{N} (y_i - \beta_0 - \textbf{X}_i^T \hat{\beta})^2 + \gamma \sum_{j=1}^{p}|\beta_j|$$
+The Lasso (least absolute shrinkage and selection operator) method is another variant of least squares that employs a slightly different penalty. Coefficient selection goes according to the following equation:
+$$\boldsymbol{\hat{\beta}}_{\text{Lasso}} = \text{argmin} \sum_{i=1}^{N} (y_i - \beta_0 - \textbf{x}_i^T \boldsymbol{\hat{\beta}})^2 + \gamma \sum_{j=1}^{p}|\boldsymbol{\beta_j}|$$
 
-With lasso, the penalty is $|\beta|$ instead of $\beta^2$ (the $L_1$ norm instead of the $L_2$ norm). One effect of using this different penalty is a sufficiently large $\gamma$ will lead to some coefficients equaling zero. The lasso method thus does variable selection in addition to fitting a linear model. \cite[64]{springer}
+With Lasso, the penalty is $|\boldsymbol{\beta}|$ instead of $\boldsymbol{\beta}^2$ (the $L_1$ norm instead of the $L_2$ norm). One effect of using this different penalty is a sufficiently large $\gamma$ will lead to some coefficients equaling zero. The Lasso method thus does variable selection in addition to fitting a linear model. \cite[64]{springer}
 
 Figure \ref{l2l1} explains the difference between the norms used as penalty in Ridge and Lasso. When optimizing the function, it is likely to intersect the $L_1$ norm on the axis, as seen on the right of Figure \ref{l2l1}, which leads to a coefficient value of zero. However, the function being optimized is more likely to intersect the $L_2$ norm somewhere not on the axis, giving a nonzero value for the coefficient
 
 \begin{figure}
 	\centering
-	\includegraphics[width=.5\linewidth]{l2l1.png}
-	\caption{On the left, we have the $L_2$ norm used in Ridge. On the right we have the $L_1$ which is used in LASSO. The effect of using the $L_1$ norm leads to a greater likelihood of the coefficients $\beta_j$ going to 0. }
+	\includegraphics[width=.5\linewidth]{l1l2.png}
+	\caption{Here we can see the $L_2$ and $L_1$ norm plotted on the same grid with different cost functions. The $L_2$ norm is the circle used in Ridge and the $L_1$ norm is the diamond used in Lasso. The various contour plots represent different cost functions. The optimal point for the constrained optimization problem is where the contours intersect the different norms. One can see that the contours tend to intersect the circle ($L_2$) not on the axes whereas they more often intersect the diamond ($L_1$) on the axes. This is why the $L_1$ norm leads to a greater likelihood of the coefficients being 0.}
 	\label{l2l1}
 \end{figure}
 
 \subsubsection{Neural Networks}
-Neural networks are a type of nonlinear statistical model. Neural networks have three parts: an input layer, which takes the same vector $X$, a hidden layer which performs an activation function, and an output layer. Assume we have $I$ input nodes, $J$ hidden layer nodes, and $K$ output nodes. The following explanation corresponds to Figure \ref{neuralnet}. 
+Neural networks are a type of nonlinear statistical model. Neural networks have three parts: an input layer, which takes the same vector $\textbf{x}$, a hidden layer which performs an activation function, and an output layer. Assume we have $d$ input nodes, $m$ hidden layer nodes, and $n$ output nodes. The following explanation corresponds to Figure \ref{neuralnet}. Keep in mind, if this were a regression, there would be a single output node.
 
 \begin{figure}[ht]
 	\centering
@@ -294,27 +322,27 @@ Neural networks are a type of nonlinear statistical model. Neural networks have 
 	\label{neuralnet}
 \end{figure}
 
-Each hidden layer node $u_j$ learns a vector of weights $\alpha_j$ and some bias $\alpha_{0j}$. Bias in neural networks is simply some intercept for the vector of weights $\alpha_j$. Each weight $\alpha_{ji}$ corresponds to an input node $X_i$. Note, the hidden layer captures certain features of the model, but the weights and values do not have an obvious meaning. It is for this reason that neural networks are mysterious and often thought of as a black box. The value of $u_j$ is simply some function $f$ applied to a linear combination of the weights and input values:
+This neural network takes an input $\textbf{x}$ with $d$ features. Each hidden layer node $z_i$ performs a linear transformation on the entire input layer given a vector of weights $\boldsymbol{\alpha_j}$ and some bias $\alpha_{0j}$. Bias in neural networks is simply an intercept for the vector of weights $\boldsymbol{\alpha_j}$. Each scalar weight $\alpha_{ji}$ corresponds to an input node $x_i$. \footnote{The hidden layer captures certain features of the model, but the weights and values do not have an obvious meaning. It is for this reason that neural networks are mysterious and often thought of as a black box.} The value of $z_j$ is simply the linear combination of the weights and input values:
 
-$$u_j = f(\phi_{j} + \sum_{x=0}^{i}\alpha_{ji} X_i)$$
+$$z_j = \sum_{x=0}^{i}\boldsymbol{\alpha_{ji}} x_i + \alpha_{0j}$$
 
-$f$ is referred to as the activation function, which is often chosen to be the rectified linear unit (ReLU):
+We then feed this set of hidden layer values $Z = \{z_j\}$ into the output layer.
 
-$$f(x) = max(0,x)$$
+Each output node has its own vector of weights $\boldsymbol{\beta_j}$ for each hidden layer nodes as well as a bias $\beta_{0j}$. The output node computes a linear combination of the hidden layer nodes and applies an activation function, $f$ to each hidden layer node value $z_i$.
 
+$f$ is referred to as the activation function, which is often chosen to be the rectified linear unit (ReLU) picture in Figure \ref{relu}:
 
-From this set of hidden layer values $U = \{u_j\}$, we can generate output.
+$$f(x) = \max(0,x)$$
 
-Each output node $u'_k$ has its own set of weights $\beta_k$ for the hidden layer nodes as well as a bias $\mu_k$. 
-When generating output, the output node applies some function $g_k$ to the linear combination of weights and hidden layer values.
+Thus we have the following value for each output node: 
 
-$$u'_k = g_k( \mu_k + \sum_{i=0}^{J} \beta_ji u_j)$$
+$$o_j = \sum_{i=0}^{J} \boldsymbol{\beta_{ij}} f(z_i) + \beta_{0j}$$
 
-For regression, the output function is typically the identity function, so $g_k(a) = a$. With regression, there is also typically only one output function. It follows that $g_k$ is the models prediction of output for some input $X$.\cite[350-351]{springer} For classification, on the other hand, the sigmoid function is often used as defined below:
+Finally the scalar from each output node is passed through a final output function $g$. For regression, the output function is typically the identity function applied to a single output node, so $g(a) = a$. \cite[350-351]{springer} For classification, on the other hand, each output node $o_i$ represents a label for the data. The output node with the largest value is the neural nets predicted label. The sigmoid function is often used to help transform the output node values into labels:
 
 $$\sigma(v) = \frac{1}{1+e^{-v}}$$
 
-The sigmoid function simply takes an input $v$ and maps it between 0 and 1, as seen in Figure \ref{sigmoid}. For a binary classification, it follows that values above .5 would be classified as a 1 and values below .5 would be classified as a 0.
+The sigmoid function simply takes an input $v$ and maps it between 0 and 1, as seen in Figure \ref{sigmoid}. For a binary classification with a single output node, it follows that values above .5 would be classified as a 1 and values below .5 would be classified as a 0. Alternatively, you could do a binary classification with two output nodes and choose the output node with the larger value as the predicted classification.
 
 \begin{figure*}[t!]
 	\centering
@@ -322,6 +350,7 @@ The sigmoid function simply takes an input $v$ and maps it between 0 and 1, as s
 		\centering
 		\includegraphics[width=\linewidth]{relu.png}
 		\caption{The rectified linear unit is often used as the activation function in hidden layer nodes.}
+		\label{relu}
 	\end{subfigure}%
 	~ 
 	\begin{subfigure}[t]{0.5\textwidth}
@@ -336,24 +365,24 @@ The sigmoid function simply takes an input $v$ and maps it between 0 and 1, as s
 \end{figure*}
 
 
-In summary, we take some input vector $X$. Each hidden layer node takes the linear combination of learned weights for each input node and the value of each input node and generates a number between 0 and 1. Finally, the output layer node computes the linear combination of hidden layer weights and the hidden layer values as the prediction for some input vector $X$.
+In summary, we take some input vector $\textbf{x}$. Each hidden layer node takes the linear combination of learned weights and the value of each input node and outputs a scalar. Finally, the output layer node computes the linear combination of hidden layer weights and the hidden layer values along with some activation function. A final output function is applied and the neural network has made its prediction.
 
 \subsubsection{Determining Coefficients}
 While we have outlined the general model for a neural network, there are some undefined parameters. These are the weights that the neural network ``learns.'' We define the set of all weights as $\theta$, which consists of 
 
-$$\{\alpha_{0j}, \alpha_j: j = 1, 2, \dots, J\}$$
-$$\{\beta_{0k}, \beta_k:  k= 1, 2, \dots, K\}$$
+$$\{\boldsymbol{\alpha_i}, b_{0i}: i = 1, 2, \dots, m\}$$
+$$\{\boldsymbol{\beta_j}, \beta_{0j}:  j= 1, 2, \dots, n\}$$
 
-With regression, we again use sum-of-squared errors to measure fit and determine coefficients. Note, this is the same measure of error used in least squares linear regression.
+With regression, we can use sum-of-squared errors to measure fit and solve for coefficients. Note, this is the same measure of error used in the linear regression models. 
+So, we determine the weights by solving the following squared error function, which sums over all $n$ data points. Let $F$ be the function representing the entire neural network.
 
-So, the squared error function for a neural network is 
-$$R(\theta) = \sum_{k=1}^{N} \sum_{i=1}^{N} (y_{ik} - f_k(x_i))^2$$ 
+$$\hat{\theta} = \text{arg} \min_\theta  \sum_{i=1}^{n} (y_{i} - F(x_i))^2$$ 
 
-The task is thus to minimize $R(\theta)$ by back-propagation. It is less straight-forward to minimize this error function because it consists of many nested functions. Moreover, the activation function ReLU is not differentiable at 0, so it cannot be solved by simply taking the gradient. More information on back-propagation can be found in \cite[354]{springer}. 
+This is more complicated than with linear regression because we need to optimize a large multivariable summation. Moreover, the activation function may not be differentiable at all points, so it may not have a real gradient. In short, some neural network error functions can be optimized analytically, but this is very time-intensive. Thus, numerical methods are used to solve for the weights. Back propogation is one such short cut that is commonly used to optimize the error function. More details on back propogation can be found in \cite[354]{springer}. 
 
 Using sum-of-squared errors leads to over-fitting in neural networks in the same way as least squares regression. Thus, neural networks can also include a penalty function in the same way that Ridge and Lasso do. 
 
-It is important to understand that many elements of the neural network are customizable You can have several hidden layers, you can add input nodes, hidden layer nodes, or output nodes. You can change the output function or the activation function. 
+It is important to understand that many elements of the neural network are customizable. You can have several hidden layers, you can add input nodes, hidden layer nodes, or output nodes. You can change the output function or the activation function. 
 
 \subsection{Classification}
 Reformulating the problem as a classification changes the error function. We can no longer use squared error because are outputs are categories. Instead, cross-entropy is used and the following error function is minimized: 
@@ -474,26 +503,42 @@ Below, we have listed the variables for the simulation:
 \end{itemize}
 
 \section{Results}
-The models were compared based on a number of investment periods: bullish, bearish, and noisy neutral.
+The models were compared based on a number of investment periods: bullish, bearish, and noisy neutral. 
+
+\begin{center}
+	\begin{tabular}{|l | c | r |}
+		\hline 
+		Figure & Prediction Method & Market Type \\ \hline 
+		Figure \ref{{fig:goog-dca-ridge-mlp-2010-12-02--2011-12-12-alphas--30-trainlength-500-performanceplot} & Regression & Noisy-Neutral \\ \hline
+		Figure \ref{fig:goog-dca-ridge-mlp-2013-12-02--2014-05-12-alphas--30-trainlength-500-performanceplot} & Regression & Noisy-Neutral \\ \hline
+		Figure \ref{fig:goog-dca-ridge-mlp-2007-11-01--2008-11-01-alphas--30-trainlength-500-performanceplot} & Regression & Bearish \\ \hline
+		Figure \ref{fig:victory} & Classification & Bullish \\ \hline
+		Figure \ref{fig:goog-dca-mlpclass-2014-11-02--2015-11-02--performanceplot} & Classification & Bullish \\ \hline
+		Figure \ref{fig:goog-dca-mlpclass-2007-11-01--2008-03-01--performanceplot} & Classification & Bearish \\ \hline
+		Figure \ref{class-steady} & Classification & Noisy-Neutral \\ \hline 
+	\end{tabular}
+\end{center}
+
+
 \subsection{Regression}
 
 \begin{figure}
 	\centering
-	\includegraphics[width=0.7\linewidth]{../Results/GOOG-DCA-RIDGE-MLP-2010-12-02--2011-12-12-alphas--[30]-train_length-500-performanceplot}
+	\includegraphics[width=\linewidth]{../Results/GOOG-DCA-RIDGE-MLP-2010-12-02--2011-12-12-alphas--[30]-train_length-500-performanceplot}
 	\caption{Here is an example of a time period in which the stock goes up slightly. Ridge and the multi-layer perceptron lose to dollar cost averaging, which mirrors the amrket that increases. Here, the regression based models clearly are unable to take advantage of small gains with basically no change.}
 	\label{fig:goog-dca-ridge-mlp-2010-12-02--2011-12-12-alphas--30-trainlength-500-performanceplot}
 \end{figure}
 
 \begin{figure}
 	\centering
-	\includegraphics[width=0.7\linewidth]{../Results/GOOG-DCA-RIDGE-MLP-2013-12-02--2014-05-12-alphas--[30]-train_length-500-performanceplot}
+	\includegraphics[width=\linewidth]{../Results/GOOG-DCA-RIDGE-MLP-2013-12-02--2014-05-12-alphas--[30]-train_length-500-performanceplot}
 	\caption{Here is an example of a noisy steady market. Dollar cost averaging performs worst here. Multi layer perceptron is able to take advantage of early rises, and by selling its position when the stock is going down, it is able to weather some of the markets fall.}
 	\label{fig:goog-dca-ridge-mlp-2013-12-02--2014-05-12-alphas--30-trainlength-500-performanceplot}
 \end{figure}
 
 \begin{figure}
 	\centering
-	\includegraphics[width=0.7\linewidth]{../Results/GOOG-DCA-RIDGE-MLP-2007-11-01--2008-11-01-alphas--[30]-train_length-500-performanceplot}
+	\includegraphics[width=\linewidth]{../Results/GOOG-DCA-RIDGE-MLP-2007-11-01--2008-11-01-alphas--[30]-train_length-500-performanceplot}
 	\caption{Here is a declining market. Dollar cost averaging consistently performs worse here because it is unable to sell and has a heavy position in a declining stock.}
 	\label{fig:goog-dca-ridge-mlp-2007-11-01--2008-11-01-alphas--30-trainlength-500-performanceplot}
 \end{figure}
@@ -513,7 +558,7 @@ The models were compared based on a number of investment periods: bullish, beari
 
 \begin{figure}
 	\centering
-	\includegraphics[width=0.7\linewidth]{../Results/GOOG-DCA-MLPCLASS-2014-11-02--2015-11-02--performanceplot}
+	\includegraphics[width=\linewidth]{../Results/GOOG-DCA-MLPCLASS-2014-11-02--2015-11-02--performanceplot}
 	\caption{This shows the multi layer perceptron classifier in a bullish market losing to dollar cost averaging. This uses a more conservative investment strategies, where you invest or sell \%30 of assets based on the classification.}
 	\label{fig:goog-dca-mlpclass-2014-11-02--2015-11-02--performanceplot}
 \end{figure}
@@ -522,7 +567,7 @@ The models were compared based on a number of investment periods: bullish, beari
 
 \begin{figure}
 	\centering
-	\includegraphics[width=0.7\linewidth]{../Results/GOOG-DCA-MLPCLASS-2007-11-01--2008-03-01--performanceplot}
+	\includegraphics[width=\linewidth]{../Results/GOOG-DCA-MLPCLASS-2007-11-01--2008-03-01--performanceplot}
 	\caption{This shows a bearish market. With the conservative investment strategy, MLP outperforms DCA.}
 	\label{fig:goog-dca-mlpclass-2007-11-01--2008-03-01--performanceplot}
 \end{figure}
@@ -531,7 +576,7 @@ The models were compared based on a number of investment periods: bullish, beari
 
 \begin{figure}
 	\centering
-	\includegraphics[width=0.7\linewidth]{../Results/GOOG-DCA-MLPCLASS-2013-12-02--2014-05-12-alphas--[1]-train_length--1-performanceplot}
+	\includegraphics[width=\linewidth]{../Results/GOOG-DCA-MLPCLASS-2013-12-02--2014-05-12-alphas--[1]-train_length--1-performanceplot}
 	\caption{This shows the multi layer perceptron classifier run on Google's stock over a time period in which the stock started and ended at the same point. Both investment strategies lost money, but the classifier-informed strategy outperformed DCA by \$10000 over the span of 5 months.}
 	\label{class-steady}
 \end{figure}
@@ -546,9 +591,28 @@ TBD
 \appendix
 
 \section{Pulling Data}
-\lstinputlisting[language=Python]{C:/Users/x92423/Documents/ThesisDataGrab/apiYahoo3.py}
-\lstinputlisting[language=Python]{C:/Users/x92423/Documents/ThesisDataGrab/dataMunch.py}
+%\lstinputlisting[language=Python]{C:/Users/x92423/Documents/ThesisDataGrab/apiYahoo3.py}
+%\lstinputlisting[language=Python]{C:/Users/x92423/Documents/ThesisDataGrab/dataMunch.py}
+\begin{comment} 
+\section{Pseudocode}
+\begin{algorithmic}
+	\ForAll{models}
+		\ForAll{days}
+			predictedYield $\gets predict(model, day)$
+			principal += \Call{BuyOrSell}{predictedYield, dailyLimit, stockOwned}
+		\EndFor 
+	\EndFor 
+	\Function{BuyOrSell}{predictedYield, dailyLimit, stockOwned}
+		\If {$predictedYield > 0}
+			x $\gets$ \Call{Buy}{predictedYield*dailyLimit}
+		\EndIf
+		\Else 
+			x $\gets$ \Call{Sell}{predictedYield*stockOwned}
+		\Return x
+	\EndFunction 
+\end{algorithmic}
 
+\end{comment}
 \begin{comment}
 
 My results this semester are encouraging. We are able to outperform dollar cost averaging in a zero-gain market as well as a crashing market using the neural network model.
